@@ -1,0 +1,22 @@
+Package: pcFactorStan
+Title: Stan Models for the Pairwise Comparison Factor Model
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = c("Joshua", "N."),
+           family = "Pritikin",
+           role = c("aut", "cre"),
+           email = "jpritikin@pobox.com",
+           comment = c(ORCID = "0000-0002-9862-5484"))
+Description: What the package does (one paragraph).
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+Depends: R (>= 3.1), rstan (>= 2.19)
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat
+VignetteBuilder: knitr
+Imports: ggplot2
+URL: https://github.com/jpritikin/fcFactorStan
+RoxygenNote: 6.1.1
