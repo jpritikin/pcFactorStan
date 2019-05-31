@@ -3,6 +3,5 @@
 set -ve
 
 sudo apt-get install -yq --allow-unauthenticated --no-install-suggests --no-install-recommends \
-  r-cran-rstan r-cran-testthat r-cran-mvtnorm r-cran-knitr
-
-export _R_CHECK_FORCE_SUGGESTS_=0
+     r-cran-rstan r-cran-testthat r-cran-mvtnorm r-cran-knitr r-cran-reshape2 r-cran-roxygen2 \
+     r-cran-devtools

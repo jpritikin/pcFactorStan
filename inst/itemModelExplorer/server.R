@@ -3,8 +3,8 @@ library(reshape2)
 
 #options(shiny.reactlog=TRUE)
 
-#verbose <- FALSE
-verbose <- TRUE
+verbose <- FALSE
+#verbose <- TRUE
 
 moveSomeParameter <- function(input, state, whichPar, newValue) {
   if (verbose) cat("moveParameter", whichPar,"to",newValue, fill=T)

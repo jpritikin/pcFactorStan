@@ -36,6 +36,7 @@ assertNameUnused <- function(df, name) {
 }
 
 #' @export
+#' @importFrom stats rnorm sd rbinom rbeta
 generateFactorItems <- function(df, prop, th=-0.5, scale=1, name) {
   palist <- verifyIsData(df)
   if (length(prop) == 1) {
@@ -74,6 +75,7 @@ generateFactorItems <- function(df, prop, th=-0.5, scale=1, name) {
 
 #' @export
 #' @importFrom mvtnorm rmvnorm
+#' @importFrom stats cov2cor rWishart
 generateCovItems <- function(df, numItems, th=-0.5, scale=1, name) {
   if (numItems < 2) stop("numItems must be 2 or greater")
   palist <- verifyIsData(df)

@@ -6,8 +6,12 @@
 #' itemModelExplorer()  # will launch a browser in RStudio
 #' }
 itemModelExplorer <- function() {
-  library(shiny)
-  shiny::runApp(system.file('itemModelExplorer', package='pcFactorStan'))
+  want <- c("shiny","ggplot2")
+  if (requireNamespace(want, quietly = TRUE)) {
+    shiny::runApp(system.file('itemModelExplorer', package='pcFactorStan'))
+  } else {
+    stop(paste0("Please install.packages(",deparse(want),") and try again"))
+  }
 }
 
 .onAttach <- function(libname, pkgname) {
