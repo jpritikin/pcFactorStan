@@ -1,2 +1,4 @@
 ^pcFactorStan\.Rproj$
 ^\.Rproj\.user$
+^\.travis\.yml$
+^util

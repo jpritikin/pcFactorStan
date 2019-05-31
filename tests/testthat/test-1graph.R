@@ -1,4 +1,4 @@
-context("test-graph")
+context("test-1graph")
 
 RNGversion("3.5")
 

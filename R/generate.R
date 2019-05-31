@@ -19,20 +19,97 @@ pairMap <- function(n) {
   result
 }
 
-#generateCovItems <- function(df)
-#generateFactorItems <- function(df)
-
 verifyIsData <- function(df) {
   if (!is.data.frame(df)) stop("df is not a data.frame")
   if (all(match(paste0('pa',1:2), colnames(df)) != c(1,2))) {
     stop("Expected pa1, pa2 as the first two columns")
   }
+  unique(c(df$pa1,df$pa2))
+}
+
+assertNameUnused <- function(df, name) {
+  collision <- !is.na(match(name, colnames(df)))
+  if (any(collision)) {
+    stop(paste("Colname", paste(name[collision], collapse=' '),
+               "is already taken. Please provide name="))
+  }
+}
+
+#' @export
+generateFactorItems <- function(df, prop, th=-0.5, scale=1, name) {
+  palist <- verifyIsData(df)
+  if (length(prop) == 1) {
+    if (prop < 3) stop(paste0("At least 3 indicators are required (", prop," requested)"))
+    prop <- rbeta(prop, 4, 3)
+  }
+  if (length(prop) < 3) stop(paste0("At least 3 indicators are required (", length(prop)," given)"))
+  if (missing(name)) {
+    num <- ncol(df)-1
+    name <- paste0('i', num:(num+length(prop)-1))
+  }
+  assertNameUnused(df, name)
+  factorScore <- rnorm(length(palist))
+  factorScore <- factorScore / sd(factorScore)
+  thetaF <- factorScore %*% t(sqrt(prop/(1-prop)))
+  thetaN <- matrix(rnorm(length(palist)*length(prop)),
+                   length(palist), length(prop))
+  sdN <- apply(thetaN, 2, sd)
+  for (cx in 1:ncol(thetaN)) {
+    thetaN[,cx] <- thetaN[,cx] / sdN[cx]
+  }
+
+  # to double check
+  ## varF <- apply(thetaF, 2, var)
+  ## varN <- apply(thetaN, 2, var)
+  ## genProp <- varF / (varF + varN)
+
+  for (cx in 2:ncol(thetaF)) {
+    if (rbinom(1, 1, .5)) thetaF[,cx] <- -thetaF[,cx]
+  }
+  theta <- thetaF + thetaN
+  theta <- scale(theta)
+  dimnames(theta) <- list(palist, name)
+  generateItem(df, theta, th, scale)
+}
+
+#' @export
+#' @importFrom mvtnorm rmvnorm
+generateCovItems <- function(df, numItems, th=-0.5, scale=1, name) {
+  if (numItems < 2) stop("numItems must be 2 or greater")
+  palist <- verifyIsData(df)
+  if (missing(name)) {
+    num <- ncol(df)-1
+    name <- paste0('i', num:(num+numItems-1))
+  }
+  assertNameUnused(df, name)
+  trueCor <- cov2cor(rWishart(1, numItems, diag(numItems))[,,1])
+  theta <- rmvnorm(length(palist), sigma=trueCor)
+  dimnames(theta) <- list(palist, name)
+  generateItem(df, theta, th, scale)
 }
 
 #' @export
 generateItem <- function(df, theta, th=-0.5, scale=1, name) {
-  verifyIsData(df)
-  palist <- unique(c(df$pa1,df$pa2))
+  if (!missing(theta) && is.matrix(theta)) {
+    if (length(colnames(theta))) {
+      if (!missing(name)) {
+        if (!all(name == colnames(theta))) {
+          stop("Mismatch between name and colnames(theta)")
+        }
+      } else {
+        name <- colnames(theta)
+      }
+    } else if (missing(name)) {
+      num <- ncol(df)-1
+      name <- paste0('i', num:(num+ncol(theta)-1))
+    }
+    for (ix in 1:ncol(theta)) {
+      df <- generateItem(df, theta[,ix], th, scale, name[ix])
+    }
+    return(df)
+  }
+
+  palist <- verifyIsData(df)
   if (missing(theta)) {
     theta <- rnorm(length(palist))
     theta <- c(scale(theta))
@@ -41,9 +118,7 @@ generateItem <- function(df, theta, th=-0.5, scale=1, name) {
   if (missing(name)) {
     name <- paste0('i', ncol(df)-1)
   }
-  if (name %in% colnames(df)) {
-    stop(paste("Colname",name,"is already taken. Please provide name="))
-  }
+  assertNameUnused(df, name)
   if (length(theta) != length(palist)) {
     stop(paste("length(theta)",length(theta),"!=", length(palist)))
   }
@@ -60,21 +135,6 @@ generateItem <- function(df, theta, th=-0.5, scale=1, name) {
     p2 <- match(df[rx,'pa2'], palist)
     prob <- cmp_probs(scale, theta[p1], theta[p2], th)
     df[rx,name] <- sample(pick, 1, prob=prob)
-  }
-  df
-}
-
-genData <- function(df, theta, th=-0.5, scale=1) {
-  numIndicators <- ncol(theta)
-  for (ix in 1:numIndicators) df[[paste0('i',ix)]] <- NA
-  palist <- rownames(theta)
-  for (rx in 1:nrow(df)) {
-    p1 <- match(df[rx,'pa1'], palist)
-    p2 <- match(df[rx,'pa2'], palist)
-    for (ix in 1:numIndicators) {
-      prob <- cmp_probs(scale, theta[p1,ix], theta[p2,ix], th)
-      df[rx,paste0('i',ix)] <- sample(c(-2,-1,0,1,2), 1, prob=prob)
-    }
   }
   df
 }
@@ -97,7 +157,7 @@ roundRobinGraph <- function(name, N) {
 }
 
 #' @export
-twoLevelGraph <- function(name, N, shape1, shape2) {
+twoLevelGraph <- function(name, N, shape1=0.8, shape2=0.5) {
   if (length(name) < 2) stop("Must provide at least 2 names")
   if (N < length(name)) {
     warning(paste("Sample size too small", N,
