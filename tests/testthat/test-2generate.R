@@ -58,4 +58,6 @@ test_that("generateFactorItems", {
                "At least 3 indicators are required")
   expect_error(generateFactorItems(df, c(.3,.4)),
                "At least 3 indicators are required")
+  expect_error(generateFactorItems(df, c(1.3,.4,.4)),
+               "Proportions must be between 0 and 1")
 })

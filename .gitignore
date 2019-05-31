@@ -3,3 +3,8 @@
 /man/pcFactorStan-package.Rd
 .Rproj.user
 /man/itemModelExplorer.Rd
+/man/generateCovItems.Rd
+/man/generateFactorItems.Rd
+/man/generateItem.Rd
+/man/roundRobinGraph.Rd
+/man/twoLevelGraph.Rd

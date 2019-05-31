@@ -35,8 +35,33 @@ assertNameUnused <- function(df, name) {
   }
 }
 
+#' Generate pairwise comparison data with a common factor that
+#' accounts for some proportion of the variance
+#'
+#' @param prop the number of items or a vector of proportions of variance
+#' @inheritParams generateItem
+#' @description
+#'
+#' Imagine that there are people that play in tournaments of more than
+#' one board game. For example, the computer player AlphaZero (Silver
+#' et al. 2018) has trained to play chess, shogi, and Go. We can take
+#' the tournament match outcome data and find rankings among the
+#' players for each of these games. We may also suspect that there is
+#' a latent board game skill that accounts for some proportion of the
+#' variance in the per-game rankings.
+#' 
+#' @family item generators
+#' @examples
+#' df <- twoLevelGraph(letters[1:10], 100)
+#' df <- generateFactorItems(df, 3)
 #' @export
 #' @importFrom stats rnorm sd rbinom rbeta
+#' @references
+#' 
+#' Silver, D., Hubert, T., Schrittwieser, J., Antonoglou, I., Lai, M.,
+#' Guez, A., ... & Lillicrap, T. (2018). A general reinforcement
+#' learning algorithm that masters chess, shogi, and Go through
+#' self-play. Science, 362(6419), 1140-1144.
 generateFactorItems <- function(df, prop, th=-0.5, scale=1, name) {
   palist <- verifyIsData(df)
   if (length(prop) == 1) {
@@ -44,13 +69,14 @@ generateFactorItems <- function(df, prop, th=-0.5, scale=1, name) {
     prop <- rbeta(prop, 4, 3)
   }
   if (length(prop) < 3) stop(paste0("At least 3 indicators are required (", length(prop)," given)"))
+  if (any(prop < 0 | prop >= 1)) stop("Proportions must be between 0 and 1")
   if (missing(name)) {
     num <- ncol(df)-1
     name <- paste0('i', num:(num+length(prop)-1))
   }
   assertNameUnused(df, name)
   factorScore <- rnorm(length(palist))
-  factorScore <- factorScore / sd(factorScore)
+  factorScore <- c(scale(factorScore))
   thetaF <- factorScore %*% t(sqrt(prop/(1-prop)))
   thetaN <- matrix(rnorm(length(palist)*length(prop)),
                    length(palist), length(prop))
@@ -73,6 +99,29 @@ generateFactorItems <- function(df, prop, th=-0.5, scale=1, name) {
   generateItem(df, theta, th, scale)
 }
 
+#' Generate pairwise comparison data with random correlations between items
+#' 
+#' @inheritParams generateItem
+#' @param numItems how many items to create
+#' @description
+#'
+#' If you need access to the correlation matrix used to generate the
+#' absolute latent scores then you will need to generate them yourself.
+#' This is not difficult. See how in the example.
+#' 
+#' @family item generators
+#' @examples
+#' df <- twoLevelGraph(letters[1:10], 100)
+#' df <- generateCovItems(df, 3)
+#'
+#' # generateCovItems essentially does the same thing as:
+#' numItems <- 3
+#' palist <- unique(c(df$pa1,df$pa2))
+#' trueCor <- cov2cor(rWishart(1, numItems, diag(numItems))[,,1])
+#' theta <- rmvnorm(length(palist), sigma=trueCor)
+#' dimnames(theta) <- list(palist, paste0('i', 3 + 1:numItems))
+#' df <- generateItem(df, theta)
+#' 
 #' @export
 #' @importFrom mvtnorm rmvnorm
 #' @importFrom stats cov2cor rWishart
@@ -90,6 +139,38 @@ generateCovItems <- function(df, numItems, th=-0.5, scale=1, name) {
   generateItem(df, theta, th, scale)
 }
 
+#' Generate pairwise comparison data for one or more items given
+#' absolute latent scores
+#' 
+#' @param df a data frame with pairs of vertices given in columns \code{pa1} and \code{pa2}
+#' @param theta a vector or matrix of absolute latent scores. See details below.
+#' @param th a vector of thresholds
+#' @param scale the scaling constant
+#' @param name a vector of item names
+#'
+#' @description
+#'
+#' TODO item response model, thresholds, scale; no discrimination template
+#' Use \code{\link{itemModelExplorer}} to explore the item model.
+#' 
+#' To add a single item, \code{theta} should be a vector of latent
+#' scores. To add multiple items at a time, \code{theta} should be a
+#' matrix with one item in each column. Item names can be given as
+#' the colnames of \code{theta}.
+#' 
+#' The interpretation of \code{theta} depends on the context where the
+#' data were generated. In chess, \code{theta} represents unobserved
+#' chess skill that is partially revealed by match outcomes.
+#' 
+#' The graph can be regarded as undirected, but data are generated
+#' relative to the order of vertices in the row. For example, a
+#' \code{-1} for vertices \sQuote{a} and \sQuote{b} is the same as
+#' \code{1} for vertices \sQuote{b} and \sQuote{a}.
+#' 
+#' @family item generators
+#' @examples
+#' df <- roundRobinGraph(letters[1:5], 40)
+#' df <- generateItem(df)
 #' @export
 generateItem <- function(df, theta, th=-0.5, scale=1, name) {
   if (!missing(theta) && is.matrix(theta)) {
@@ -141,6 +222,14 @@ generateItem <- function(df, theta, th=-0.5, scale=1, name) {
   df
 }
 
+#' Create an edge list with round-robin connectivity
+#'
+#' @param name vector of vertex names
+#' @param N number of comparisons
+#' @return An undirected graph represented as a data frame with each row describing an edge.
+#' @family graph generators
+#' @examples
+#' roundRobinGraph(letters[1:5], 10)
 #' @export
 roundRobinGraph <- function(name, N) {
   if (length(name) < 2) stop("Must provide at least 2 names")
@@ -158,6 +247,28 @@ roundRobinGraph <- function(name, N) {
   df
 }
 
+#' Create an edge list with a random two level connectivity
+#'
+#' @param shape1 beta distribution parameter for first edge
+#' @param shape2 beta distribution parameter for second edge
+#'
+#' @description
+#' Initially, edges are added from the first vertex to all the other
+#' vertices. Thereafter, the first vertex is drawn from a Beta(shape1,
+#' 1.0) distribution and the second vertex is drawn from a
+#' Beta(shape2, 1.0) distribution. The idea is that the edges will
+#' tend to connect a small subset of vertices from the top of the tree
+#' to leaf vertices. These vertex connections are similar to the pairs
+#' that you might observe in an elimination tournament. The selected
+#' vertices are sorted so it doesn't matter whether \code{shape1 >
+#' shape2} or \code{shape1 < shape2} as long as \code{shape1 !=
+#' shape2}.
+#'
+#' @inheritParams roundRobinGraph
+#' @inherit roundRobinGraph return
+#' @family graph generators
+#' @examples
+#' twoLevelGraph(letters[1:5], 20)
 #' @export
 twoLevelGraph <- function(name, N, shape1=0.8, shape2=0.5) {
   if (length(name) < 2) stop("Must provide at least 2 names")

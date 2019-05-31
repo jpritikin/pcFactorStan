@@ -13,8 +13,3 @@ itemModelExplorer <- function() {
     stop(paste0("Please install.packages(",deparse(want),") and try again"))
   }
 }
-
-.onAttach <- function(libname, pkgname) {
-	packageStartupMessage(paste(
-          "Use itemModelExplorer() to explore the item model."))
-}
