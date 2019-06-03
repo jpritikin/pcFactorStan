@@ -21,15 +21,15 @@ test_that("normalizeData", {
                ".palist must contain the names of all vertices")
 
   d1 <- phyActFlowPropensity
-  d2 <- normalizeData(d1)
+  d2 <- normalizeData(d1, .sortRows = FALSE)
   # due to truncation from "running;solo" and similar
-  expect_equal(which(d1$pa1 != d2$pa1), c(125, 357))
+  expect_equal(which(d1$pa1 != d2$pa1), c(151, 153))
 })
 
 test_that("prepCleanData", {
   df <- phyActFlowPropensity[,c(1,2,7)]
   dl <- prepCleanData(df)
-  expect_equivalent(c(table(dl$refresh)), c(215, 340))
+  expect_equivalent(c(table(dl$refresh)), c(223, 342))
   expect_equivalent(c(table(dl$weight)),
-                    c(389L, 80L, 27L, 19L, 13L, 8L, 5L, 2L, 3L, 2L, 2L,  1L, 1L, 2L, 1L))
+                    c(405L, 79L, 33L, 10L, 12L, 6L, 6L, 4L, 1L, 1L, 1L, 2L, 1L, 1L,  2L, 1L))
 })

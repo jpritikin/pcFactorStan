@@ -1,7 +1,8 @@
 #' Normalize data according to a canonical order
 #'
-#' @param df a data frame with pairs of vertices given in columns \code{pa1} and \code{pa2}
+#' @template args-df
 #' @param .palist a character vector giving an order to use instead of the default
+#' @param .sortRows logical. Sort rows in addition to vertex pairs.
 #'
 #' @description
 #'
@@ -17,7 +18,7 @@
 #' df[2,paste0('pa',1:2)] <- c('b','a')
 #' normalizeData(df)
 #' @export
-normalizeData <- function(df, ..., .palist=NULL) {
+normalizeData <- function(df, ..., .palist=NULL, .sortRows=TRUE) {
   palist <- verifyIsData(df)
   if (!missing(.palist)) {
     if (length(palist) != length(.palist)) {
@@ -34,6 +35,9 @@ normalizeData <- function(df, ..., .palist=NULL) {
   tmp <- df[flip, 'pa1']
   df[flip, 'pa1'] <- df[flip, 'pa2']
   df[flip, 'pa2'] <- tmp
+  if (.sortRows) {
+    df <- df[order(df$pa1, df$pa2),]
+  }
   df
 }
 
@@ -85,7 +89,7 @@ prepCleanData <- function(df) {
     # multivariate models
     NITEMS=length(nthr),
     NTHRESH=nthr,
-    TOFFSET=cumsum(nthr-1L) + 1L,
+    TOFFSET=c(1L, 1L + cumsum(nthr)[-length(nthr)]),
     # data (all models)
     pa1=pa1,
     pa2=pa2,
@@ -119,8 +123,10 @@ locateModel <- function(model, data) {
     stop(paste("Stan model not found:", stan_path))
   }
 
-  if (model == 'unidim+adapt' && is.null(data[['varCorrection']])) {
-    stop("You must choose a varCorrection. For example, data$varCorrection <- 2.0")
+  if (model == 'unidim+adapt') {
+    if (is.null(data[['varCorrection']])) {
+      stop("You must choose a varCorrection. For example, data$varCorrection <- 2.0")
+    }
   } else if (is.null(data[['scale']])) {
     stop(paste0("You must choose a scale. For example, data$scale <- 1.8\n",
                 "The 'unidim+adapt' model can help determine an optimal scale."))
