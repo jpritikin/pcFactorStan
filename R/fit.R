@@ -2,7 +2,7 @@
 #'
 #' @template args-df
 #' @param .palist a character vector giving an order to use instead of the default
-#' @param .sortRows logical. Sort rows in addition to vertex pairs.
+#' @param .sortRows logical. Using the same order, sort rows in addition to vertex pairs.
 #'
 #' @description
 #'
@@ -41,6 +41,23 @@ normalizeData <- function(df, ..., .palist=NULL, .sortRows=TRUE) {
   df
 }
 
+#' Transforms data into a form tailored for efficient evaluation by Stan
+#' 
+#' @template args-df
+#'
+#' @description
+#' @template desc-prepData
+#'
+#' @details
+#' Note: Reordering of responses is likely unless something like
+#' \code{\link{normalizeData}} has been used with \code{.sortRows=TRUE}.
+#' 
+#' @return a data list suitable for passing as the \code{data}
+#'   argument to \code{\link{pcStan}} or \code{\link[rstan]{stan}}
+#' @family data preppers
+#' @examples
+#' df <- prepCleanData(phyActFlowPropensity)
+#' str(df)
 #' @importFrom reshape2 melt
 #' @export
 prepCleanData <- function(df) {
@@ -101,6 +118,21 @@ prepCleanData <- function(df) {
   )
 }
 
+#' Transforms data into a form tailored for efficient evaluation by Stan
+#' 
+#' @template args-df
+#'
+#' @description
+#' Invokes \code{\link{filterGraph}} and \code{\link{normalizeData}}.
+#' @template desc-prepData
+#' 
+#' @return a data list suitable for passing as the \code{data}
+#'   argument to \code{\link{pcStan}} or \code{\link[rstan]{stan}}
+#' @family data preppers
+#' @examples
+#' df <- prepData(phyActFlowPropensity)
+#' str(df)
+#' 
 #' @export
 prepData <- function(df) {
   df <- filterGraph(df)

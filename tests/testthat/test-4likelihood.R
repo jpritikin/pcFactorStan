@@ -33,10 +33,10 @@ test_that("covariance", {
   dl$scale <- 1.5
   m2 <- stan_model(locateModel("covariance+ll", data=dl))
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
-  expect_equal(get_logposterior(f2)[[1]], -114592.3, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -104708.629, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
-               c(-191.855, -6.121, -2.951, -1.731, 0), tolerance=1e-2, scale=1)
+               c(-134.39, -4.687, -2.096, -1.283, 0), tolerance=1e-2, scale=1)
 })
 
 test_that("factor", {
@@ -44,7 +44,7 @@ test_that("factor", {
   dl$scale <- 1.5
   m2 <- stan_model(locateModel("factor+ll", data=dl))
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
-  expect_equal(get_logposterior(f2)[[1]], -114116.3, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -114116.344, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
                c(-60.806, -10.001, -4.726, -1.691, 0), tolerance=1e-2, scale=1)
@@ -66,8 +66,8 @@ test_that("mixed thresholds", {
   dl$scale <- 1.5
   m2 <- stan_model(locateModel("covariance+ll", data=dl))
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
-  expect_equal(get_logposterior(f2)[[1]], -4611.471, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -5103.036, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
-               c(-20.86, -3.784, -2.167, -0.838, -0.002), tolerance=1e-2, scale=1)
+               c(-24.931, -4.213, -2.717, -1.373, -0.002), tolerance=1e-2, scale=1)
 })

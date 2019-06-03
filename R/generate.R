@@ -157,23 +157,25 @@ generateCovItems <- function(df, numItems, th=-0.5, scale=1, name) {
 #' @param name a vector of item names
 #'
 #' @description
-#'
-#' TODO item response model, thresholds, scale; no discrimination template
-#' Use \code{\link{itemModelExplorer}} to explore the item model.
-#' 
 #' To add a single item, \code{theta} should be a vector of latent
 #' scores. To add multiple items at a time, \code{theta} should be a
 #' matrix with one item in each column. Item names can be given as
 #' the colnames of \code{theta}.
 #' 
 #' The interpretation of \code{theta} depends on the context where the
-#' data were generated. In chess, \code{theta} represents unobserved
-#' chess skill that is partially revealed by match outcomes.
+#' data were generated. For example, in chess, \code{theta} represents
+#' unobserved chess skill that is partially revealed by match
+#' outcomes.
 #' 
 #' The graph can be regarded as undirected, but data are generated
-#' relative to the order of vertices in the row. For example, a
-#' \code{-1} for vertices \sQuote{a} and \sQuote{b} is the same as
-#' \code{1} for vertices \sQuote{b} and \sQuote{a}.
+#' relative to the order of vertices in the row. Vertices do not
+#' commute. For example, a \code{-1} for vertices \sQuote{a} and
+#' \sQuote{b} is the same as \code{1} for vertices \sQuote{b} and
+#' \sQuote{a}.
+#'
+#' @details
+#' TODO item response model, thresholds, scale; no discrimination template
+#' Use \code{\link{itemModelExplorer}} to explore the item model.
 #' 
 #' @family item generators
 #' @examples
