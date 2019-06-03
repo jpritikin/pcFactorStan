@@ -1,0 +1,35 @@
+context("test-3data")
+
+RNGversion("3.5")
+
+test_that("normalizeData", {
+  df <- data.frame(pa1=NA, pa2=NA, i1=c(1, -1))
+  df[1,paste0('pa',1:2)] <- c('a','b')
+  df[2,paste0('pa',1:2)] <- c('b','a')
+  df <- normalizeData(df)
+  expect_equal(df$pa1, c('a','a'))
+  expect_equal(df$i1, c(1,1))
+
+  df <- rbind(df, data.frame(pa1='c', pa2='b', i1=2))
+  df <- normalizeData(df, .palist = c('c','b','a'))
+  expect_equal(df$pa1, c( 'b','b','c'))
+  expect_equal(df$i1, c(-1,-1,2))
+
+  expect_error(normalizeData(df, .palist = c('b','a')),
+               ".palist must be length 3")
+  expect_error(normalizeData(df, .palist = c('b','a','q')),
+               ".palist must contain the names of all vertices")
+
+  d1 <- phyActFlowPropensity
+  d2 <- normalizeData(d1)
+  # due to truncation from "running;solo" and similar
+  expect_equal(which(d1$pa1 != d2$pa1), c(125, 357))
+})
+
+test_that("prepCleanData", {
+  df <- phyActFlowPropensity[,c(1,2,7)]
+  dl <- prepCleanData(df)
+  expect_equivalent(c(table(dl$refresh)), c(215, 340))
+  expect_equivalent(c(table(dl$weight)),
+                    c(389L, 80L, 27L, 19L, 13L, 8L, 5L, 2L, 3L, 2L, 2L,  1L, 1L, 2L, 1L))
+})

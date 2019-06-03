@@ -33,7 +33,7 @@ test_that("generateCovItems", {
   c1 <- cov(df[,paste0('i',1:3)])
   expect_equal(c1[lower.tri(c1, diag = TRUE)],
                c(0.543, 0.232, -0.134, 0.77, -0.266, 0.652),
-               tolerance=.001)
+               tolerance=.001, scale=1)
 
   expect_error(generateCovItems(df, 1),
                "numItems must be 2 or greater")
@@ -52,7 +52,7 @@ test_that("generateFactorItems", {
   c1 <- cov(df[,paste0('i',1:3)])
   expect_equal(c1[lower.tri(c1, diag = TRUE)],
                c(0.674, -0.14, -0.107, 0.672, 0.229, 0.559),
-               tolerance=1e-3)
+               tolerance=1e-3, scale=1)
 
   expect_error(generateFactorItems(df, 1),
                "At least 3 indicators are required")

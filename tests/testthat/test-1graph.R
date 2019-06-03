@@ -32,3 +32,31 @@ test_that("twoLevelGraph", {
   expect_error(twoLevelGraph(letters, 50, .5, 2),
                "must be between 0 and 1")
 })
+
+test_that("filterGraph", {
+  df <- data.frame(pa1=rep(NA,15), pa2=NA)
+  for (rx in 1:11) {
+    df[rx,] <- c('a','b')
+  }
+  for (rx in 12:15) {
+    df[rx,] <- c('a','c')
+  }
+  df <- filterGraph(df)
+  expect_equal(nrow(df), 11)
+  expect_equal(attr(df, 'weak'), "c")
+
+  df <- data.frame(pa1=rep(NA,15), pa2=NA)
+  for (rx in 1:11) {
+    df[rx,] <- c('a','b')
+  }
+  for (rx in 12:14) {
+    df[rx,] <- c('b','c')
+  }
+  df[15,] <- c('a','c')
+  df <- filterGraph(df)
+  expect_equal(nrow(df), 15)
+
+  df <- filterGraph(phyActFlowPropensity[,c(1,2)])
+  expect_equal(length(attr(df, 'disconnected')), 8)
+  expect_equal(length(attr(df, 'weak')), 18)
+})

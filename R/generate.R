@@ -21,10 +21,18 @@ pairMap <- function(n) {
 
 verifyIsData <- function(df) {
   if (!is.data.frame(df)) stop("df is not a data.frame")
-  if (all(match(paste0('pa',1:2), colnames(df)) != c(1,2))) {
+  if (any(is.na(match(paste0('pa',1:2), colnames(df))))) {
     stop("Expected pa1, pa2 as the first two columns")
   }
-  unique(c(df$pa1,df$pa2))
+  if (is.factor(df$pa1) && is.factor(df$pa2)) {
+    if (length(levels(df$pa1)) != length(levels(df$pa2)) ||
+        any(levels(df$pa1) != levels(df$pa2))) {
+      stop("Some levels(pa1) don't match levels(pa2)")
+    }
+    levels(df$pa1)
+  } else {
+    unique(c(as.character(df$pa1), as.character(df$pa2)))
+  }
 }
 
 assertNameUnused <- function(df, name) {
@@ -299,4 +307,70 @@ twoLevelGraph <- function(name, N, shape1=0.8, shape2=0.5) {
     df[rx,'pa2'] <- name[pick[2]]
   }
   df
+}
+
+#' Filter graph to remove vertices that are not well connected
+#' 
+#' @param df a data frame with pairs of vertices given in columns \code{pa1} and \code{pa2}
+#' @param minAny the minimum number of edges
+#' @param minDifferent the minimum number of vertices
+#'
+#' @description
+#' 
+#' Vertices not part of the largest connected component are excluded.
+#' Vertices that have fewer than \code{minAny} edges and are not
+#' connected to \code{minDifferent} or more different vertices are
+#' excluded. For example, vertex \sQuote{a} connected to vertices
+#' \sQuote{b} and \sQuote{c} will be include so long as these vertices
+#' are part of the largest connected component.
+#'
+#' @return The same graph excluding some
+#'   vertices.
+#' 
+#' @importFrom igraph graph_from_edgelist components incident
+#' @examples
+#' df <- filterGraph(phyActFlowPropensity[,c(paste0('pa',1:2),'predict')])
+#' head(df)
+#' 
+#' @export
+filterGraph <- function(df, minAny=11L, minDifferent=2L) {
+  verifyIsData(df)
+  el <- as.matrix(df[,c(paste0('pa',1:2))])
+  gr <- graph_from_edgelist(el, directed = FALSE)
+  c1 <- components(gr)
+  largest <- which(c1$csize == max(c1$csize))
+  disconnected <- names(c1$membership[c1$membership != largest])
+  good <- names(c1$membership[c1$membership == largest])
+  weak <- c()
+  for (g1 in good) {
+    ie <- incident(gr, g1)
+    vn <- attr(ie, 'vnames')
+    if (length(vn) >= minAny || sum(!duplicated(vn)) >= minDifferent) next
+    weak <- c(weak, g1)
+  }
+  good <- setdiff(good, weak)
+
+  df <- df[df$pa1 %in% good & df$pa2 %in% good,]
+  attr(df, 'disconnected') <- disconnected
+  attr(df, 'weak') <- weak
+  class(df) <- c("filteredGraph", class(df))
+  df
+}
+
+#' @export
+print.filteredGraph <- function(x, ...) {
+  df <- x
+  class(df) <- 'data.frame'
+  print(df, ...)
+  dis <- attr(x, 'disconnected')
+  weak <- attr(x, 'weak')
+  if (length(c(dis,weak))) {
+    message("Some vertices were excluded,")
+    if (length(dis)) {
+      message("  not part of the largest connected component: ", deparse(dis))
+    }
+    if (length(weak)) {
+      message("  too weakly connected: ", deparse(weak))
+    }
+  }
 }
