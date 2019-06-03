@@ -150,7 +150,7 @@ generateCovItems <- function(df, numItems, th=-0.5, scale=1, name) {
 #' Generate pairwise comparison data for one or more items given
 #' absolute latent scores
 #' 
-#' @param df a data frame with pairs of vertices given in columns \code{pa1} and \code{pa2}
+#' @template args-df
 #' @param theta a vector or matrix of absolute latent scores. See details below.
 #' @param th a vector of thresholds
 #' @param scale the scaling constant
@@ -311,7 +311,7 @@ twoLevelGraph <- function(name, N, shape1=0.8, shape2=0.5) {
 
 #' Filter graph to remove vertices that are not well connected
 #' 
-#' @param df a data frame with pairs of vertices given in columns \code{pa1} and \code{pa2}
+#' @template args-df
 #' @param minAny the minimum number of edges
 #' @param minDifferent the minimum number of vertices
 #'

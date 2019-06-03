@@ -129,6 +129,7 @@ locateModel <- function(model, data) {
   stan_path
 }
 
+#' @importFrom rstan stan
 #' @export
 pcStan <- function(model = "", data, ... ) {
   stan_path <- locateModel(model, data)
