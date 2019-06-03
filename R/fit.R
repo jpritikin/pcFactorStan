@@ -1,6 +1,7 @@
 #' Normalize data according to a canonical order
 #'
 #' @template args-df
+#' @param ...  Not used.  Forces remaining arguments to be specified by name.
 #' @param .palist a character vector giving an order to use instead of the default
 #' @param .sortRows logical. Using the same order, sort rows in addition to vertex pairs.
 #'
@@ -98,7 +99,7 @@ prepCleanData <- function(df) {
     refresh <- c(refresh, c(1, rep(0, length(pt)-1)))
   }
 
-  list(
+  dl <- list(
     # all models
     NPA=length(palist),
     NCMP=length(pick),
@@ -116,6 +117,10 @@ prepCleanData <- function(df) {
     # multivariate data
     item=item
   )
+  if (any(is.na(match(preppedDataFields, names(dl))))) {
+    stop("Bug in prepCleanData(); contact developers")
+  }
+  dl
 }
 
 #' Transforms data into a form tailored for efficient evaluation by Stan
@@ -140,28 +145,66 @@ prepData <- function(df) {
   prepCleanData(df)
 }
 
+preppedDataFields <- c('NPA','NCMP','N','pa1','pa1','weight','pick','refresh')
+
+verifyIsPreppedData <- function(data) {
+  if (is.data.frame(data)) stop("Data must processed by prepData. Try prepData(data)")
+  if (is.list(data) && all(!is.na(match(preppedDataFields, names(data))))) return()
+  stop("Is data an object returned by prepData()? Seems not")
+}
+
+#' Given a model name and data, return the path to a Stan model
+#' 
+#' @param model the name of a model
+#' @param data a data list prepared for processing by Stan
+#' @description
+#' 
+#' This is a convenience function to help you look up the path to an
+#' appropriate model for your data.
+#' 
+#' @return a file system path to the selected model
+#' @seealso \code{\link{pcStan}}
+#' @examples
+#' locateModel()  # shows available models
+#'
+#' df1 <- prepData(phyActFlowPropensity[,1:3])
+#' df1$varCorrection <- 2.0
+#' locateModel(data=df1)
+#'
+#' df2 <- prepData(phyActFlowPropensity[,1:5])
+#' df2$scale <- 1.5
+#' locateModel(data=df2)
 #' @export
 locateModel <- function(model, data) {
+  if (!missing(data)) {
+    verifyIsPreppedData(data)
+  }
+  
   extdata <- system.file("extdata", package = "pcFactorStan")
+  avail <- sub(".stan$", "", dir(extdata, pattern=".stan$"), perl=TRUE)
 
   if (missing(model)) {
+    if (missing(data)) {
+      message(paste("Models available:", paste0(deparse(avail), collapse="")))
+      return(invisible())
+    }
     model <- ifelse(data$NITEMS == 1, "unidim+adapt", "covariance")
   }
 
   stan_path <- file.path(extdata, ifelse(grepl("\\.stan$", model), model, paste0(model, ".stan")))
   if(!file.exists(stan_path)) {
-    avail <- sub(".stan$", "", dir(extdata, pattern=".stan$"), perl=TRUE)
-    message("Models available: ", deparse(avail))
     stop(paste("Stan model not found:", stan_path))
   }
 
-  if (model == 'unidim+adapt') {
-    if (is.null(data[['varCorrection']])) {
-      stop("You must choose a varCorrection. For example, data$varCorrection <- 2.0")
+  if (!missing(data)) {
+    if (model == 'unidim+adapt') {
+      if (is.null(data[['varCorrection']])) {
+        stop("You must choose a varCorrection. For example, data$varCorrection <- 2.0")
+      }
+    } else if (is.null(data[['scale']])) {
+      stop(paste0("You must choose a scale. For example, data$scale <- 1.8\n",
+                  "The 'unidim+adapt' model can help determine an optimal scale."))
     }
-  } else if (is.null(data[['scale']])) {
-    stop(paste0("You must choose a scale. For example, data$scale <- 1.8\n",
-                "The 'unidim+adapt' model can help determine an optimal scale."))
   }
 
   stan_path
@@ -170,6 +213,7 @@ locateModel <- function(model, data) {
 #' @importFrom rstan stan
 #' @export
 pcStan <- function(model = "", data, ... ) {
+  verifyIsPreppedData(data)
   stan_path <- locateModel(model, data)
   message("Using ", file.path(stan_path))
   rstan::stan(stan_path, data = data, ...)
