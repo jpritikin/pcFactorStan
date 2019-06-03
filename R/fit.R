@@ -154,9 +154,8 @@ verifyIsPreppedData <- function(data) {
 }
 
 #' Given a model name and data, return the path to a Stan model
-#' 
-#' @param model the name of a model
-#' @param data a data list prepared for processing by Stan
+#'
+#' @template args-locate
 #' @description
 #' 
 #' This is a convenience function to help you look up the path to an
@@ -175,16 +174,16 @@ verifyIsPreppedData <- function(data) {
 #' df2$scale <- 1.5
 #' locateModel(data=df2)
 #' @export
-locateModel <- function(model, data) {
-  if (!missing(data)) {
+locateModel <- function(model=NULL, data=NULL) {
+  if (!is.null(data)) {
     verifyIsPreppedData(data)
   }
   
   extdata <- system.file("extdata", package = "pcFactorStan")
   avail <- sub(".stan$", "", dir(extdata, pattern=".stan$"), perl=TRUE)
 
-  if (missing(model)) {
-    if (missing(data)) {
+  if (is.null(model)) {
+    if (is.null(data)) {
       message(paste("Models available:", paste0(deparse(avail), collapse="")))
       return(invisible())
     }
@@ -196,7 +195,7 @@ locateModel <- function(model, data) {
     stop(paste("Stan model not found:", stan_path))
   }
 
-  if (!missing(data)) {
+  if (!is.null(data)) {
     if (model == 'unidim+adapt') {
       if (is.null(data[['varCorrection']])) {
         stop("You must choose a varCorrection. For example, data$varCorrection <- 2.0")
@@ -210,9 +209,20 @@ locateModel <- function(model, data) {
   stan_path
 }
 
+#' Fit a pairwise comparison Stan model
+#' @template args-locate
+#' @param ... forwarded to \link[rstan]{stan}
+#' @description
+#' Uses \code{\link{locateModel}} to find the appropriate
+#' model and then invokes \link[rstan]{stan}.
+#'
+#' @examples
+#' dl <- prepData(phyActFlowPropensity[,c(1,2,3)])
+#' dl$varCorrection <- 2.0
+#' \dontrun{pcStan(data=dl)}
 #' @importFrom rstan stan
 #' @export
-pcStan <- function(model = "", data, ... ) {
+pcStan <- function(model=NULL, data, ...) {
   verifyIsPreppedData(data)
   stan_path <- locateModel(model, data)
   message("Using ", file.path(stan_path))
