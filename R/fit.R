@@ -44,15 +44,19 @@ normalizeData <- function(df, ..., .palist=NULL, .sortRows=TRUE) {
 
 #' Transforms data into a form tailored for efficient evaluation by Stan
 #' 
-#' @template args-df
-#'
-#' @description
-#' @template desc-prepData
+#' Vertex names, if not already factors, are converted to
+#' factors.  The number of thresholds per item is determined by the
+#' largest absolute response value.  Missing responses are filtered
+#' out.  Responses on the same pair of vertices on the same item are
+#' grouped together.  Within a vertex pair and item, responses
+#' are ordered from negative to positive.
 #'
 #' @details
 #' Note: Reordering of responses is likely unless something like
 #' \code{\link{normalizeData}} has been used with \code{.sortRows=TRUE}.
 #' 
+#' @template args-df
+#'
 #' @return a data list suitable for passing as the \code{data}
 #'   argument to \code{\link{pcStan}} or \code{\link[rstan]{stan}}
 #' @family data preppers
@@ -129,7 +133,12 @@ prepCleanData <- function(df) {
 #'
 #' @description
 #' Invokes \code{\link{filterGraph}} and \code{\link{normalizeData}}.
-#' @template desc-prepData
+#' Vertex names, if not already factors, are converted to
+#' factors.  The number of thresholds per item is determined by the
+#' largest absolute response value.  Missing responses are filtered
+#' out.  Responses on the same pair of vertices on the same item are
+#' grouped together.  Within a vertex pair and item, responses
+#' are ordered from negative to positive.
 #' 
 #' @return a data list suitable for passing as the \code{data}
 #'   argument to \code{\link{pcStan}} or \code{\link[rstan]{stan}}

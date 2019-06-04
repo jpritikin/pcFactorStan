@@ -10,3 +10,7 @@
 /man/twoLevelGraph.Rd
 /man/filterGraph.Rd
 /man/normalizeData.Rd
+/man/pcStan.Rd
+/man/prepCleanData.Rd
+/man/prepData.Rd
+/man/locateModel.Rd
