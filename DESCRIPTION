@@ -2,11 +2,12 @@ Package: pcFactorStan
 Title: Stan Models for the Pairwise Comparison Factor Model
 Version: 0.8
 Authors@R: 
-    person(given = c("Joshua", "N."),
+    c(person(given = c("Joshua", "N."),
            family = "Pritikin",
            role = c("aut", "cre"),
            email = "jpritikin@pobox.com",
-           comment = c(ORCID = "0000-0002-9862-5484"))
+           comment = c(ORCID = "0000-0002-9862-5484")),
+	   person(given = c("Daniel C."), family = "Furr", role="ctb", email = "danielcfurr@berkeley.edu"))
 Description: Provides convenience functions and pre-programmed Stan models
     related to the pairwise comparison factor model. Its purpose is to make fitting
     pairwise comparison data using Stan easy.

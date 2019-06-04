@@ -174,16 +174,19 @@ verifyIsPreppedData <- function(data) {
 #' 
 #' There are essentially three models: \sQuote{unidim}, \sQuote{covariance}, and \sQuote{factor}.
 #' \sQuote{unidim} analyzes a single item. \sQuote{covariance} is suitable for two or more items.
-#' \sQuote{factor} may work with as few as three items, but is more stable with more items.
+#' Once you have vetted your items with the \sQuote{unidim} and \sQuote{covariance} models,
+#' then you can try the \sQuote{factor} model.
 #' For each model, there is a \sQuote{+ll} variation. This model
 #' includes row-wise log likelihoods suitable for feeding to \pkg{loo}
 #' for efficient approximate leave-one-out cross-validation.
 #'
-#' There is also a special model \sQuote{unidim+adapt}.
-#' Except for this model, the other models require a scaling constant.
-#' To find an appropriate scaling constant, we recommend
-#' fitting \sQuote{unidim+adapt} to each item separately using
-#' \code{varCorrection=2} and then taking the median to set the scale.
+#' There is also a special model \sQuote{unidim+adapt}.  Except for
+#' this model, the other models require a scaling constant.  To find
+#' an appropriate scaling constant, we recommend fitting
+#' \sQuote{unidim+adapt} to each item separately and then take the
+#' median of median point estimates to set the scale. \sQuote{unidim+adapt} requires a
+#' varCorrection constant. In general, a varCorrection of 2.0 or 3.0
+#' should provide optimal results.
 #' 
 #' @return a file system path to the selected model
 #' @seealso \code{\link{pcStan}}

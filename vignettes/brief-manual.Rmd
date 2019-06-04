@@ -1,0 +1,220 @@
+---
+title: "A brief manual"
+author: Joshua N. Pritikin
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{A brief manual}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+library(ggplot2)
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+set.seed(1)
+```
+
+# Overview
+
+The **pcFactorStan** package for **R** provides convenience functions and pre-programmed **Stan** models related to analysis of pairwise comparison data. Its purpose is to make fitting models using Stan easy. **pcFactorStan** relies on the **rstan** package, which should be installed first.
+[See here](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started) for instructions on installing **rstan**.
+
+One situation where a factor model might be useful
+is when there are people that play in tournaments of more than
+one board game. For example, the computer player AlphaZero (Silver
+et al. 2018) has trained to play chess, shogi, and Go. We can take
+the tournament match outcome data and find rankings among the
+players for each of these games. We may also suspect that there is
+a latent board game skill that accounts for some proportion of the
+variance in the per-board game rankings. This proportion can be
+recovered by the factor model.
+
+Our goal may be to fit a factor model, but it is necessary to
+build up the model step-by-step.
+There are essentially three models: 'unidim', 'covariance', and 'factor'.
+'unidim' analyzes a single item.
+'covariance' is suitable for two or more items.
+Once you have vetted your items with the 'unidim' and 'covariance'
+models, then you can try the 'factor' model.
+There is also a special model 'unidim+adapt'.
+Except for this model, the other models require a scaling constant.
+To find an appropriate scaling constant, we will
+fit 'unidim+adapt' to each item separately
+and then take the median of median point estimates
+to set the scale.
+
+# Brief tutorial
+
+## Physical activity flow propensity
+
+The R code below first loads **pcFactorStan**, which implicitly loads **rstan**. The two commands that follow set generally recommended options related to **rstan**. The first causes compiled **Stan** models to be cached on disk, allowing models to run more quickly after the first time. The second causes **Stan** to run multiple chains in parallel.
+
+```{r, message=FALSE}
+library(pcFactorStan)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+```
+
+Next we take a peek at the data.
+
+```{r}
+head(phyActFlowPropensity)
+```
+
+These data consist of paired comparisons of 87 physical activities on 16 flow-related facets. Participants submitted two activities using free-form input. These activities were substitute into item templates. For example, the 'predict' item asked, "How predictable is the action?" with response options:
+
+* A1 is much more predictable than A2.
+* A1 is somewhat more predictable than A2.
+* Both offer roughly equal predictability.
+* A2 is somewhat more predictable than A1.
+* A2 is much more predictable than A1.
+
+A "somewhat more" response is denoted with a 1 or -1
+and "much more" with a 2 or -2.
+A tie (i.e. "roughly equal") is denoted by a zero.
+We will need to analyze each item separately before
+we analyze them together. Therefore, we will start
+with 'skill'.
+
+Data is fed into **Stan** in a partially digested form, and the next block of code demonstrates how a suitable data object may be constructed using the `prepData()` function. This function automatically determines how
+many threshold parameters to estimate based on the
+range of your data.
+One thing it does not do is pick a `varCorrection` factor. The `varCorrection` determines the degree of adaption in the model. Usually setting 2.0 or 3.0 will obtain optimal results.
+
+```{r}
+dl <- prepData(phyActFlowPropensity[,c(paste0('pa',1:2), 'skill')])
+dl$varCorrection <- 2.0
+```
+
+Next we fit the model using the `pcStan()` function, which is a wrapper for `stan()` from **rstan**. We also choose the number of chains. By default, the first half of each chain is discarded as warm up.
+
+```{r, message=FALSE, results='hide'}
+fit1 <- pcStan(data=dl, chains=4L)
+```
+
+A variety of diagnostics are available to check whether the sampler ran into trouble.
+
+```{r}
+check_hmc_diagnostics(fit1)
+```
+
+Everything looks good, but there are a few more things to check.
+We want $\widehat R < 1.015$ and effective sample size greater than 100 times the number of chains (Vehtari et al., 2019).
+
+```{r}
+sims <- extract(fit1, permuted = FALSE, inc_warmup=FALSE)
+bulkess <- apply(sims, 3, ess_bulk)
+tailess <- apply(sims, 3, ess_tail)
+print(max(apply(sims, 3, Rhat)))
+print(min(c(bulkess, tailess)))
+```
+
+Again, everything looks good. Time for a plot,
+
+```{r}
+theta <- summary(fit1, pars=c("theta"), probs=c())$summary[,'mean']
+palist <- levels(phyActFlowPropensity$pa1)
+
+ggplot(data.frame(x=theta, activity=palist, y=0.47)) +
+  geom_point(aes(x=x),y=0) +
+  geom_text(aes(label=activity, x=x, y=y),
+            angle=85, hjust=0, size=2,
+            position = position_jitter(width = 0, height = 0.4)) + ylim(0,1) +
+  theme(legend.position="none",
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+```
+
+That seems like a fairly reasonable ranking for skill.
+I am inclined to flip the sign so that _walking_ has a negative skill
+and _golf_ has a positive skill, but the sign is not important for
+this brief tutorial. Actually the main reason that we fit this model
+is to find a scaling factor that would produce a standard
+deviation close to 1.0,
+
+```{r}
+
+s50 <- summary(fit1, pars=c("scale"), probs=c(.5))$summary[,'50%']
+print(s50)
+
+```
+
+We use the median instead of the mean because `scale` is not likely to have a symmetric marginal posterior distribution.
+
+# Technical notes
+
+If you read through the **Stan** models, you will find some
+variables prefixed with `raw`. These are special variables
+internal to the model. In particular, you should not try
+to evaluate the $\widehat R$ or effective sample size
+of `raw` parameters.
+
+## Unidim
+
+| parameter | prior        | purpose                  |
+|-----------|--------------|--------------------------|
+| threshold | normal(0,2)  | item response thresholds |
+| theta     | normal(0,1)  | latent score    |
+
+The 'unidim+adapt' model has a `varCorrection` constant
+that is used to calibrate the `scale`. For multivariate models,
+`scale` should be set to the median of the item-wise scales.
+
+## Covariance
+
+| parameter | prior          | purpose                              |
+|-----------|----------------|--------------------------------------|
+| threshold | normal(0,2)    | item response thresholds             |
+| thetaCor  | lkj(2)         | correlations between items           |
+| sigma     | lognormal(1,1) | relative item standard deviations    |
+| theta     | _see below_    | latent score                |
+
+Thresholds for all
+items are combined into a single vector.
+The prior for `theta` is multivariate normal with correlations
+`thetaCor` and standard deviations `sigma`.
+
+## Factor
+
+| parameter      | prior               | purpose                              |
+|----------------|---------------------|--------------------------------------|
+| threshold      | normal(0,2)         | item response thresholds             |
+| unique         | normal(1,1) T[0,]   | standard deviation of unique scores  |
+| uniqueTheta    | normal(0,1)         | unique scores                        |
+| factorLoadings | normal(0,1)         | signed standard deviation of factor scores  |
+| factor         | normal(0,1)         | factor scores                        |
+| factorProp     | _see below_         | signed factor variance proportion    |
+
+Thresholds for all items are combined into a single vector.
+`factorProp` is derived using Equation 3 of Gelman et al. (in press).
+Therefore, the prior for `factorProp` is some function of the priors
+for the other parameters.
+`factorLoadings` is in standard deviation units but can be negative.
+Similarly, `factorProp` is a signed proportion bounded between -1 and 1.
+
+# Writing your own **Stan** models
+
+We anticipate that **pcFactorModel** users may eventually want to write their own **Stan** models. The models included in **pcFactorStan** may be used as a starting point in developing custom models. The following code shows how to find and view one of these files.
+
+```{r, results='hide'}
+cat(readLines(locateModel('unidim')), sep = "\n")
+```
+
+# References
+
+Gelman, A., Goodrich, B., Gabry, J., & Vehtari, A. (in press). R-squared for Bayesian regression models. The American Statistician. DOI: 10.1080/00031305.2018.1549100
+
+Silver, D., Hubert, T., Schrittwieser, J., Antonoglou, I., Lai, M.,
+Guez, A., ... & Lillicrap, T. (2018). A general reinforcement
+learning algorithm that masters chess, shogi, and Go through
+self-play. Science, 362(6419), 1140-1144.
+
+Vehtari, A., Gelman, A., Simpson, D., Carpenter, B., & Bürkner, P. C. (2019). Rank-normalization, folding, and localization: An improved $\widehat R$ for assessing convergence of MCMC. arXiv preprint arXiv:1903.08008.

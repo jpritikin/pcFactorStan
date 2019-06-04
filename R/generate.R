@@ -2,7 +2,7 @@ softmax <- function(y) exp(y) / sum(exp(y))
 
 cmp_probs <- function(scale, pa1, pa2, thRaw) {
   th <- cumsum(thRaw)
-  diff <- scale * (pa1 - pa2);
+  diff <- scale * (pa1 - pa2)
   unsummed <- c(0, c(diff - rev(th)), c(diff + th), use.names = FALSE)
   softmax(cumsum(unsummed))
 }
@@ -56,20 +56,17 @@ assertNameUnused <- function(df, name) {
 #' the tournament match outcome data and find rankings among the
 #' players for each of these games. We may also suspect that there is
 #' a latent board game skill that accounts for some proportion of the
-#' variance in the per-game rankings.
+#' variance in the per-board game rankings.
 #' 
+#' @template detail-response
+#' @template ref-masters1982
+#' @template ref-silver2018
 #' @family item generators
 #' @examples
 #' df <- twoLevelGraph(letters[1:10], 100)
 #' df <- generateFactorItems(df, 3)
 #' @export
 #' @importFrom stats rnorm sd rbinom rbeta
-#' @references
-#' 
-#' Silver, D., Hubert, T., Schrittwieser, J., Antonoglou, I., Lai, M.,
-#' Guez, A., ... & Lillicrap, T. (2018). A general reinforcement
-#' learning algorithm that masters chess, shogi, and Go through
-#' self-play. Science, 362(6419), 1140-1144.
 generateFactorItems <- function(df, prop, th=-0.5, scale=1, name) {
   palist <- verifyIsData(df)
   if (length(prop) == 1) {
@@ -117,6 +114,8 @@ generateFactorItems <- function(df, prop, th=-0.5, scale=1, name) {
 #' absolute latent scores then you will need to generate them yourself.
 #' This is not difficult. See how in the example.
 #' 
+#' @template detail-response
+#' @template ref-masters1982
 #' @family item generators
 #' @examples
 #' df <- twoLevelGraph(letters[1:10], 100)
@@ -173,10 +172,8 @@ generateCovItems <- function(df, numItems, th=-0.5, scale=1, name) {
 #' \sQuote{b} is the same as \code{1} for vertices \sQuote{b} and
 #' \sQuote{a}.
 #'
-#' @details
-#' TODO item response model, thresholds, scale; no discrimination template
-#' Use \code{\link{itemModelExplorer}} to explore the item model.
-#' 
+#' @template detail-response
+#' @template ref-masters1982
 #' @family item generators
 #' @examples
 #' df <- roundRobinGraph(letters[1:5], 40)
@@ -325,6 +322,20 @@ twoLevelGraph <- function(name, N, shape1=0.8, shape2=0.5) {
 #' excluded. For example, vertex \sQuote{a} connected to vertices
 #' \sQuote{b} and \sQuote{c} will be include so long as these vertices
 #' are part of the largest connected component.
+#'
+#' @details
+#' Given that \code{minDifferent} defaults to 2,
+#' if activity \eqn{A} was compared to at least
+#' two other activities, \eqn{B} and \eqn{C}, then \eqn{A} is retained.
+#' The rationale is that,
+#' although little may be learned about \eqn{A},
+#' there may be a transitive relationship,
+#' such as \eqn{B < A < C}, by which the model can infer that \eqn{B < C}.
+#' Therefore, per-activity sample size is less of a concern
+#' when the graph is densely connected.
+#' 
+#' A young novice asked the wise master, "Why is 11 the default \code{minAny} instead of 10?"
+#' The master answered, "Because 11 is a prime number."
 #'
 #' @return The same graph excluding some
 #'   vertices.

@@ -5,7 +5,8 @@
 \description{Paired comparisons of 87 physical activities on 16
   flow-related facets. Participants submitted two activities using free-form
   input. These activities were substitute into item templates.
-  For example, \dQuote{How predictable is the action?} with response options:
+  For example, the \sQuote{predict} item asked,
+  \dQuote{How predictable is the action?} with response options:
   \itemize{
     \item A1 is much more predictable than A2.
     \item A1 is somewhat more predictable than A2.
