@@ -54,6 +54,7 @@ test_that("mixed thresholds", {
   set.seed(1)
   palist <- letters[1:10]
   df <- twoLevelGraph(palist, 300)
+  for (k in paste0('pa',1:2)) df[[k]] <- factor(df[[k]], levels=palist)
   numItems <- 5
   trueCor <- cov2cor(rWishart(1, numItems, diag(numItems))[,,1])
   theta <- rmvnorm(length(palist), sigma=trueCor)
@@ -62,12 +63,22 @@ test_that("mixed thresholds", {
     df <- generateItem(df, theta[,ix], th=rep(-0.5, ix))
   }
 
-  dl <- prepData(df)
+  df <- filterGraph(df)
+  dl <- prepCleanData(df)
   dl$scale <- 1.5
   m2 <- stan_model(locateModel("covariance+ll", data=dl))
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
-  expect_equal(get_logposterior(f2)[[1]], -5103.036, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -5308.334, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
-               c(-24.931, -4.213, -2.717, -1.373, -0.002), tolerance=1e-2, scale=1)
+               c(-40.229, -3.952, -2.563, -1.368, -0.002), tolerance=1e-2, scale=1)
+
+  df <- normalizeData(df, .palist=sample(palist, 10))
+  dl <- prepCleanData(df)
+  dl$scale <- 1.5
+  f3 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
+  expect_equal(get_logposterior(f3)[[1]],
+               get_logposterior(f2)[[1]], tolerance=1e-2, scale=1)
+  expect_equal(fivenum(extract(f2)$log_lik[1,]),
+               fivenum(extract(f3)$log_lik[1,]), tolerance=1e-2, scale=1)
 })

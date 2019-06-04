@@ -3,12 +3,13 @@ context("test-3data")
 RNGversion("3.5")
 
 test_that("normalizeData", {
-  df <- data.frame(pa1=NA, pa2=NA, i1=c(1, -1))
+  df <- data.frame(pa1=NA, pa2=NA, i1=c(1, -1), i2=c(-2, 2))
   df[1,paste0('pa',1:2)] <- c('a','b')
   df[2,paste0('pa',1:2)] <- c('b','a')
   df <- normalizeData(df)
   expect_equal(df$pa1, c('a','a'))
   expect_equal(df$i1, c(1,1))
+  expect_equal(df$i2, c(-2,-2))
 
   df <- rbind(df, data.frame(pa1='c', pa2='b', i1=2))
   df <- normalizeData(df, .palist = c('c','b','a'))

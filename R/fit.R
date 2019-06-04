@@ -21,7 +21,7 @@
 #' @export
 normalizeData <- function(df, ..., .palist=NULL, .sortRows=TRUE) {
   palist <- verifyIsData(df)
-  if (!missing(.palist)) {
+  if (!is.null(.palist)) {
     if (length(palist) != length(.palist)) {
       stop(paste(".palist must be length", length(palist)))
     }
