@@ -169,6 +169,21 @@ verifyIsPreppedData <- function(data) {
 #' 
 #' This is a convenience function to help you look up the path to an
 #' appropriate model for your data.
+#'
+#' @details
+#' 
+#' There are essentially three models: \sQuote{unidim}, \sQuote{covariance}, and \sQuote{factor}.
+#' \sQuote{unidim} analyzes a single item. \sQuote{covariance} is suitable for two or more items.
+#' \sQuote{factor} may work with as few as three items, but is more stable with more items.
+#' For each model, there is a \sQuote{+ll} variation. This model
+#' includes row-wise log likelihoods suitable for feeding to \pkg{loo}
+#' for efficient approximate leave-one-out cross-validation.
+#'
+#' There is also a special model \sQuote{unidim+adapt}.
+#' Except for this model, the other models require a scaling constant.
+#' To find an appropriate scaling constant, we recommend
+#' fitting \sQuote{unidim+adapt} to each item separately using
+#' \code{varCorrection=2} and then taking the median to set the scale.
 #' 
 #' @return a file system path to the selected model
 #' @seealso \code{\link{pcStan}}
@@ -220,10 +235,18 @@ locateModel <- function(model=NULL, data=NULL) {
 
 #' Fit a pairwise comparison Stan model
 #' @template args-locate
-#' @param ... forwarded to \link[rstan]{stan}
-#' @description
-#' Uses \code{\link{locateModel}} to find the appropriate
-#' model and then invokes \link[rstan]{stan}.
+#' @param ... Additional options passed to
+#'   \code{\link[rstan]{stan}}. The usual choices are \code{iter} for
+#'   the number of iterations and \code{chains} for the number of
+#'   chains.
+#' @description Uses \code{\link{locateModel}} to find the appropriate
+#'   model and then invokes \link[rstan]{stan}.
+#' @return A \code{\link[rstan]{stanfit-class}} object.
+#' @seealso See \code{\link[rstan]{stan}}, for which this function is
+#'   a wrapper, for additional options. See \code{\link{prepData}} to
+#'   create a suitable data list.  See
+#'   \code{\link[rstan]{print.stanfit}} for ways of getting tables
+#'   summarizing parameter posteriors.
 #'
 #' @examples
 #' dl <- prepData(phyActFlowPropensity[,c(1,2,3)])

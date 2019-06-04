@@ -11,7 +11,7 @@ test_that("normalizeData", {
   expect_equal(df$i1, c(1,1))
   expect_equal(df$i2, c(-2,-2))
 
-  df <- rbind(df, data.frame(pa1='c', pa2='b', i1=2))
+  df <- rbind(df, data.frame(pa1='c', pa2='b', i1=2, i2=-1))
   df <- normalizeData(df, .palist = c('c','b','a'))
   expect_equal(df$pa1, c( 'b','b','c'))
   expect_equal(df$i1, c(-1,-1,2))
