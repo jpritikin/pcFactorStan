@@ -108,14 +108,14 @@ Everything looks good, but there are a few more things to check.
 We want $\widehat R < 1.015$ and effective sample size greater than 100 times the number of chains (Vehtari et al., 2019).
 
 ```{r}
-sims <- extract(fit1, permuted = FALSE, inc_warmup=FALSE)
-bulkess <- apply(sims, 3, ess_bulk)
-tailess <- apply(sims, 3, ess_tail)
-print(max(apply(sims, 3, Rhat)))
-print(min(c(bulkess, tailess)))
+allPars <- summary(fit1, probs=c())$summary
+print(min(allPars[,'n_eff']))
+print(max(allPars[,'Rhat']))
 ```
 
-Again, everything looks good. Time for a plot,
+Again, everything looks good. If the targets values were not reached
+then we would sample the model again with more iterations.
+Time for a plot,
 
 ```{r}
 theta <- summary(fit1, pars=c("theta"), probs=c())$summary[,'mean']
@@ -134,23 +134,33 @@ ggplot(data.frame(x=theta, activity=palist, y=0.47)) +
 ```
 
 That seems like a fairly reasonable ranking for skill.
-I am inclined to flip the sign so that _walking_ has a negative skill
-and _golf_ has a positive skill, but the sign is not important for
-this brief tutorial. Actually the main reason that we fit this model
-is to find a scaling factor that would produce a standard
+As pretty as the plot is, the main reason that we fit this model
+was to find a scaling factor that would produce a standard
 deviation close to 1.0,
 
 ```{r}
-
 s50 <- summary(fit1, pars=c("scale"), probs=c(.5))$summary[,'50%']
 print(s50)
-
 ```
 
 We use the median instead of the mean because `scale` is not likely to have a symmetric marginal posterior distribution.
 
+```{r, message=FALSE, results='hide'}
+result <- calibrateItems(phyActFlowPropensity)
+
+```
+
+```{r}
+print(result)
+```
+
+
 # Technical notes
 
+Given that my background is more in programming than math,
+I am not a fan of the greek letters used by
+mathematicians with such enthusiasm.
+When I name variables, I favor the expressive over the succinct.
 If you read through the **Stan** models, you will find some
 variables prefixed with `raw`. These are special variables
 internal to the model. In particular, you should not try
@@ -191,12 +201,11 @@ The prior for `theta` is multivariate normal with correlations
 | uniqueTheta    | normal(0,1)         | unique scores                        |
 | factorLoadings | normal(0,1)         | signed standard deviation of factor scores  |
 | factor         | normal(0,1)         | factor scores                        |
-| factorProp     | _see below_         | signed factor variance proportion    |
+| factorProp     | N/A                 | signed factor variance proportion    |
 
 Thresholds for all items are combined into a single vector.
-`factorProp` is derived using Equation 3 of Gelman et al. (in press).
-Therefore, the prior for `factorProp` is some function of the priors
-for the other parameters.
+`factorProp` is computed using Equation 3 of Gelman et al. (in press)
+and has no prior of its own.
 `factorLoadings` is in standard deviation units but can be negative.
 Similarly, `factorProp` is a signed proportion bounded between -1 and 1.
 

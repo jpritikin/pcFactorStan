@@ -10,8 +10,8 @@
 #' 
 #' cmp_probs <- function(scale, pa1, pa2, thRaw) {
 #'   th <- cumsum(thRaw)
-#'   diff <- scale * (pa1 - pa2)
-#'   unsummed <- c(0, c(diff - rev(th)), c(diff + th), use.names = FALSE)
+#'   diff <- scale * (pa2 - pa1)
+#'   unsummed <- c(0, c(diff + rev(th)), c(diff - th), use.names = FALSE)
 #'   softmax(cumsum(unsummed))
 #' }
 #' }
@@ -20,8 +20,8 @@
 #' latent scores for two objects \code{pa1} and \code{pa2}, and a
 #' vector of thresholds \code{thRaw}. The thresholds are parameterized
 #' as the difference from the previous threshold. For example,
-#' thresholds c(-0.5, -0.5) are not at the same location but are at
-#' locations c(-0.5, -1.0). Thresholds are symmetric. If there is one
+#' thresholds c(0.5, 0.5) are not at the same location but are at
+#' locations c(0.5, 1.0). Thresholds are symmetric. If there is one
 #' thresholds then the model admits three possible response outcomes
 #' (e.g. win, tie, and lose). Responses are always stored centered
 #' with zero representing a tie. Therefore, it is necessary to add one

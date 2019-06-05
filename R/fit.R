@@ -238,10 +238,7 @@ locateModel <- function(model=NULL, data=NULL) {
 
 #' Fit a pairwise comparison Stan model
 #' @template args-locate
-#' @param ... Additional options passed to
-#'   \code{\link[rstan]{stan}}. The usual choices are \code{iter} for
-#'   the number of iterations and \code{chains} for the number of
-#'   chains.
+#' @template args-stan
 #' @description Uses \code{\link{locateModel}} to find the appropriate
 #'   model and then invokes \link[rstan]{stan}.
 #' @return A \code{\link[rstan]{stanfit-class}} object.
@@ -251,6 +248,8 @@ locateModel <- function(model=NULL, data=NULL) {
 #'   \code{\link[rstan]{print.stanfit}} for ways of getting tables
 #'   summarizing parameter posteriors.
 #'
+#' @return An object of S4 class \code{\link[rstan]{stanfit}}.
+#' @seealso \code{\link{calibrateItems}}
 #' @examples
 #' dl <- prepData(phyActFlowPropensity[,c(1,2,3)])
 #' dl$varCorrection <- 2.0
@@ -262,4 +261,62 @@ pcStan <- function(model=NULL, data, ...) {
   stan_path <- locateModel(model, data)
   message("Using ", file.path(stan_path))
   rstan::stan(stan_path, data = data, ...)
+}
+
+#' Determine the optimal scale constant for a set of items
+#' @template args-df
+#' @template args-stan
+#' @param iter A positive integer specifying the number of iterations for each chain (including warmup).
+#' @param chains A positive integer specifying the number of Markov chains.
+#' @param varCorrection A correction factor greater than or equal to 1.0
+#' @param maxAttempts How many times to try re-running a model with more iterations.
+#'
+#' @description
+#'
+#' Data are passed through \code{\link{filterGraph}} and \code{\link{normalizeData}}.
+#' Then the \sQuote{unidim+adapt} model is fit to each item individually.
+#' A larger \code{varCorrection} will obtain a more accurate
+#' \code{scale}, but is also more likely to produce an intractable
+#' model. A good compromise is between 2.0 and 4.0.
+#'
+#' @seealso \code{\link[rstan]{check_hmc_diagnostics}}
+#' @template ref-vehtari2019
+#' @examples
+#' \dontrun{
+#' result <- calibrateItems(phyActFlowPropensity)
+#' print(result)
+#' }
+#' @export
+calibrateItems <- function(df, iter=2000L, chains=4L, varCorrection=3.0, maxAttempts=5L, ...) {
+  df <- filterGraph(df)
+  df <- normalizeData(df)
+  vCol <- match(paste0('pa',1:2), colnames(df))
+  chains <- 4L
+  varCorrection <- 3.0
+  result <- expand.grid(item=colnames(df[,-vCol]),
+                        iter=iter,
+                        divergent=NA, treedepth=NA, low_bfmi=NA, n_eff=NA, Rhat=NA, scale=NA)
+  for (attempt in 1:maxAttempts) {
+    for (rx in 1:nrow(result)) {
+      if (!is.na(result[rx,'divergent']) && 
+          (result[rx,'divergent'] || result[rx,'treedepth'] || result[rx,'low_bfmi'])) next
+      if (!is.na(result[rx, 'Rhat']) &&
+          result[rx, 'Rhat'] < 1.015 && result[rx, 'n_eff'] > 100 * chains) next
+
+      itemCol <- match(result[rx,'item'], colnames(df))
+      dl <- prepCleanData(df[,c(vCol, itemCol)])
+      dl$varCorrection <- varCorrection
+      fit1 <- pcStan(data=dl, chains=chains, iter=result[rx,'iter'])
+      result[rx,'divergent'] <- get_num_divergent(fit1)
+      result[rx,'treedepth'] <- sum(get_max_treedepth_iterations(fit1))
+      result[rx,'low_bfmi'] <- length(get_low_bfmi_chains(fit1))
+      allPars <- summary(fit1, probs=0.5)$summary
+      result[rx,'n_eff'] <- min(allPars[,'n_eff'])
+      result[rx,'Rhat'] <- max(allPars[,'Rhat'])
+      result[rx,'scale'] <- allPars['scale','50%']
+      result[rx,'thetaVar'] <- var(summary(fit1, pars="theta", probs=c())$summary[,'mean'])
+      result[rx,'iter'] <- round(result[rx,'iter'] * 1.5)
+    }
+  }
+  result
 }

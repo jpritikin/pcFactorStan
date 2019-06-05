@@ -2,8 +2,8 @@ softmax <- function(y) exp(y) / sum(exp(y))
 
 cmp_probs <- function(scale, pa1, pa2, thRaw) {
   th <- cumsum(thRaw)
-  diff <- scale * (pa1 - pa2)
-  unsummed <- c(0, c(diff - rev(th)), c(diff + th), use.names = FALSE)
+  diff <- scale * (pa2 - pa1)
+  unsummed <- c(0, c(diff + rev(th)), c(diff - th), use.names = FALSE)
   softmax(cumsum(unsummed))
 }
 

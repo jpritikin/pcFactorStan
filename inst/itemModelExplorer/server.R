@@ -26,7 +26,7 @@ softmax <- function(y) exp(y) / sum(exp(y))
 cmp_probs <- function(alpha, scale, rawDiff, thRaw) {
   th <- cumsum(thRaw)
   diff = scale * rawDiff
-  unsummed <- c(0, c(diff - rev(th)), c(diff + th), use.names = FALSE)
+  unsummed <- c(0, c(diff + rev(th)), c(diff - th), use.names = FALSE)
   cumsum(unsummed * alpha)
 }
 
@@ -36,7 +36,7 @@ calcProb <- function(par, theta) {
 }
 
 shinyServer(function(input, output, session) {
-  par <- c(discrimination=1.749, scale=1, th1=-.8, th2=-1.7)
+  par <- c(discrimination=1.749, scale=1, th1=.8, th2=1.7)
   state <- reactiveValues(par = par)
   
   parNames <- names(par)
