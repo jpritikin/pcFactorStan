@@ -37,12 +37,31 @@ my $responseData =
   int pick[NCMP];
   int refresh[NCMP];';
 
+my $unidim_ll =
+'  vector[NTHRESH*2 + 1] prob;
+  vector[N] log_lik;
+  int cur = 1;
+
+  for (cmp in 1:NCMP) {
+    real ll;
+    if (refresh[cmp]) {
+      prob = cmp_probs(scale, theta[pa1[cmp]], theta[pa2[cmp]], cumTh);
+    }
+    ll = categorical_lpmf(rcat[cmp] | prob);
+    for (wx in 1:weight[cmp]) {
+      log_lik[cur] = ll;
+      cur = cur + 1;
+    }
+  }
+';
+
 sub mkUnidim {
-    my ($adapt) = @_;
+    my ($adapt, $ll) = @_;
     my $data = $adapt? "varCorrection" : "scale";
     my $scaleDef = $adapt? "
   real scale = (sigma * sigma) ^ varCorrection;
 " : "";
+    my $llBody = $ll? $unidim_ll : '';
 
     my $unidim =
 qq[data {
@@ -82,29 +101,11 @@ model {
     }
   }
 }
+generated quantities {
+  real thetaVar = variance(theta);
+$llBody}
 ];
 }
-
-
-my $unidim_ll =
-'generated quantities {
-  vector[NTHRESH*2 + 1] prob;
-  vector[N] log_lik;
-  int cur = 1;
-
-  for (cmp in 1:NCMP) {
-    real ll;
-    if (refresh[cmp]) {
-      prob = cmp_probs(scale, theta[pa1[cmp]], theta[pa2[cmp]], cumTh);
-    }
-    ll = categorical_lpmf(rcat[cmp] | prob);
-    for (wx in 1:weight[cmp]) {
-      log_lik[cur] = ll;
-      cur = cur + 1;
-    }
-  }
-}
-';
 
 my $multivariateDataCommon =
 qq[data {
@@ -291,18 +292,17 @@ generated quantities {$llDecl
 {
     open my $fh, ">$dest/unidim.stan";
     print $fh $itemModel;
-    print $fh mkUnidim(0);
+    print $fh mkUnidim(0,0);
 }
 {
     open my $fh, ">$dest/unidim+adapt.stan";
     print $fh $itemModel;
-    print $fh mkUnidim(1);
+    print $fh mkUnidim(1,0);
 }
 {
     open my $fh, ">$dest/unidim+ll.stan";
     print $fh $itemModel;
-    print $fh mkUnidim(0);
-    print $fh $unidim_ll;
+    print $fh mkUnidim(0,1);
 }
 {
     open my $fh, ">$dest/covariance.stan";

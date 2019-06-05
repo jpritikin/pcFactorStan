@@ -58,6 +58,7 @@ model {
   }
 }
 generated quantities {
+  real thetaVar = variance(theta);
   vector[NTHRESH*2 + 1] prob;
   vector[N] log_lik;
   int cur = 1;

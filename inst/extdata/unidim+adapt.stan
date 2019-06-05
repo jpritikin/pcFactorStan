@@ -59,3 +59,6 @@ model {
     }
   }
 }
+generated quantities {
+  real thetaVar = variance(theta);
+}

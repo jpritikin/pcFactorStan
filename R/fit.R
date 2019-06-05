@@ -279,6 +279,19 @@ pcStan <- function(model=NULL, data, ...) {
 #' \code{scale}, but is also more likely to produce an intractable
 #' model. A good compromise is between 2.0 and 4.0.
 #'
+#' @return
+#' A data.frame (one row per item) with the following columns:
+#' \describe{
+#'  \item{item}{Name of the item}
+#'  \item{iter}{Number of iterations per chain}
+#'  \item{divergent}{Number of divergent transitions observed after warmup}
+#'  \item{treedepth}{Number of times the treedepth was exceeded}
+#'  \item{low_bfmi}{Number of chains with low E-BFMI}
+#'  \item{n_eff}{Minimum effective number of samples across all parameters}
+#'  \item{Rhat}{Maximum Rhat across all parameters}
+#'  \item{scale}{Median marginal posterior of \code{scale}}
+#'  \item{thetaVar}{Median variance of theta (latent scores)}
+#'  }
 #' @seealso \code{\link[rstan]{check_hmc_diagnostics}}
 #' @template ref-vehtari2019
 #' @examples
@@ -295,8 +308,9 @@ calibrateItems <- function(df, iter=2000L, chains=4L, varCorrection=3.0, maxAtte
   chains <- 4L
   varCorrection <- 3.0
   result <- expand.grid(item=colnames(df[,-vCol]),
-                        iter=iter,
-                        divergent=NA, treedepth=NA, low_bfmi=NA, n_eff=NA, Rhat=NA, scale=NA)
+                        iter=NA,
+                        divergent=NA, treedepth=NA, low_bfmi=NA, n_eff=NA, Rhat=NA,
+                        scale=NA, thetaVar=NA)
   for (attempt in 1:maxAttempts) {
     for (rx in 1:nrow(result)) {
       if (!is.na(result[rx,'divergent']) &&
@@ -307,6 +321,8 @@ calibrateItems <- function(df, iter=2000L, chains=4L, varCorrection=3.0, maxAtte
       itemCol <- match(result[rx,'item'], colnames(df))
       dl <- prepCleanData(df[,c(vCol, itemCol)])
       dl$varCorrection <- varCorrection
+      if (is.na(result[rx,'iter'])) result[rx,'iter'] <- iter
+      else result[rx,'iter'] <- result[rx,'iter'] * 1.5
       fit1 <- pcStan(data=dl, chains=chains, iter=result[rx,'iter'])
       result[rx,'divergent'] <- get_num_divergent(fit1)
       result[rx,'treedepth'] <- sum(get_max_treedepth_iterations(fit1))
@@ -315,8 +331,7 @@ calibrateItems <- function(df, iter=2000L, chains=4L, varCorrection=3.0, maxAtte
       result[rx,'n_eff'] <- min(allPars[,'n_eff'])
       result[rx,'Rhat'] <- max(allPars[,'Rhat'])
       result[rx,'scale'] <- allPars['scale','50%']
-      result[rx,'thetaVar'] <- var(summary(fit1, pars="theta", probs=c())$summary[,'mean'])
-      result[rx,'iter'] <- round(result[rx,'iter'] * 1.5)
+      result[rx,'thetaVar'] <- allPars['thetaVar','50%']
     }
   }
   result
