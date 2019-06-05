@@ -67,7 +67,7 @@ assertNameUnused <- function(df, name) {
 #' df <- generateFactorItems(df, 3)
 #' @export
 #' @importFrom stats rnorm sd rbinom rbeta
-generateFactorItems <- function(df, prop, th=-0.5, scale=1, name) {
+generateFactorItems <- function(df, prop, th=0.5, scale=1, name) {
   palist <- verifyIsData(df)
   if (length(prop) == 1) {
     if (prop < 3) stop(paste0("At least 3 indicators are required (", prop," requested)"))
@@ -118,6 +118,7 @@ generateFactorItems <- function(df, prop, th=-0.5, scale=1, name) {
 #' @template ref-masters1982
 #' @family item generators
 #' @examples
+#' library(mvtnorm)
 #' df <- twoLevelGraph(letters[1:10], 100)
 #' df <- generateCovItems(df, 3)
 #'
@@ -132,7 +133,7 @@ generateFactorItems <- function(df, prop, th=-0.5, scale=1, name) {
 #' @export
 #' @importFrom mvtnorm rmvnorm
 #' @importFrom stats cov2cor rWishart
-generateCovItems <- function(df, numItems, th=-0.5, scale=1, name) {
+generateCovItems <- function(df, numItems, th=0.5, scale=1, name) {
   if (numItems < 2) stop("numItems must be 2 or greater")
   palist <- verifyIsData(df)
   if (missing(name)) {
@@ -179,7 +180,7 @@ generateCovItems <- function(df, numItems, th=-0.5, scale=1, name) {
 #' df <- roundRobinGraph(letters[1:5], 40)
 #' df <- generateItem(df)
 #' @export
-generateItem <- function(df, theta, th=-0.5, scale=1, name) {
+generateItem <- function(df, theta, th=0.5, scale=1, name) {
   if (!missing(theta) && is.matrix(theta)) {
     if (length(colnames(theta))) {
       if (!missing(name)) {

@@ -3,23 +3,12 @@
 use Modern::Perl '2018';
 use Fatal qw(open);
 
-die "Must be run from top level" if !-e './util/genStan';
+die "Must be run from top level" if !-e './tools/genStan';
 
-my $dest = 'inst/extdata';
+my $dest = 'src/stan_files';
 
 my $itemModel = 'functions {
-  vector cmp_probs(real scale, real pa1, real pa2, vector thr) {
-    int nth = num_elements(thr);
-    vector[1+nth*2] unsummed;
-    real paDiff = scale * (pa2 - pa1);
-    unsummed[1] = 0;
-    for (tx in 1:nth) {
-      real t1 = thr[nth+1-tx];
-      unsummed[1+tx] = paDiff + t1;
-      unsummed[1+2*nth+1-tx] = paDiff - t1;
-    }
-    return softmax(cumulative_sum(unsummed));
-  }
+#include /functions/cmp_prob.stan
 }
 ';
 
@@ -291,36 +280,43 @@ generated quantities {$llDecl
 
 {
     open my $fh, ">$dest/unidim.stan";
+    print $fh "#include /pre/license.stan\n";
     print $fh $itemModel;
     print $fh mkUnidim(0,0);
 }
 {
-    open my $fh, ">$dest/unidim+adapt.stan";
+    open my $fh, ">$dest/unidim_adapt.stan";
+    print $fh "#include /pre/license.stan\n";
     print $fh $itemModel;
     print $fh mkUnidim(1,0);
 }
 {
-    open my $fh, ">$dest/unidim+ll.stan";
+    open my $fh, ">$dest/unidim_ll.stan";
+    print $fh "#include /pre/license.stan\n";
     print $fh $itemModel;
     print $fh mkUnidim(0,1);
 }
 {
     open my $fh, ">$dest/covariance.stan";
+    print $fh "#include /pre/license.stan\n";
     print $fh $itemModel;
     print $fh mkCovModel(0);
 }
 {
-    open my $fh, ">$dest/covariance+ll.stan";
+    open my $fh, ">$dest/covariance_ll.stan";
+    print $fh "#include /pre/license.stan\n";
     print $fh $itemModel;
     print $fh mkCovModel(1);
 }
 {
     open my $fh, ">$dest/factor.stan";
+    print $fh "#include /pre/license.stan\n";
     print $fh $itemModel;
     print $fh mkFactorModel(0);
 }
 {
-    open my $fh, ">$dest/factor+ll.stan";
+    open my $fh, ">$dest/factor_ll.stan";
+    print $fh "#include /pre/license.stan\n";
     print $fh $itemModel;
     print $fh mkFactorModel(1);
 }

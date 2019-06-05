@@ -1,2 +1,3 @@
-*.html
-*.R
+/brief-manual.html
+/brief-manual_cache
+/brief-manual_files

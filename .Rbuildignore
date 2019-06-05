@@ -1,5 +1,6 @@
 ^pcFactorStan\.Rproj$
 ^\.Rproj\.user$
 ^\.travis\.yml$
-^util
 ^man-roxygen
+^codecov\.yml$
+^vignettes/brief-manual_cache/

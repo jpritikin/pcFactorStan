@@ -12,6 +12,7 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
+library(knitr)
 library(ggplot2)
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -27,10 +28,10 @@ The **pcFactorStan** package for **R** provides convenience functions and pre-pr
 
 One situation where a factor model might be useful
 is when there are people that play in tournaments of more than
-one board game. For example, the computer player AlphaZero (Silver
+one game. For example, the computer player AlphaZero (Silver
 et al. 2018) has trained to play chess, shogi, and Go. We can take
-the tournament match outcome data and find rankings among the
-players for each of these games. We may also suspect that there is
+the tournament match outcome data for each of these games
+and find rankings among the players. We may also suspect that there is
 a latent board game skill that accounts for some proportion of the
 variance in the per-board game rankings. This proportion can be
 recovered by the factor model.
@@ -42,10 +43,10 @@ There are essentially three models: 'unidim', 'covariance', and 'factor'.
 'covariance' is suitable for two or more items.
 Once you have vetted your items with the 'unidim' and 'covariance'
 models, then you can try the 'factor' model.
-There is also a special model 'unidim+adapt'.
+There is also a special model 'unidim_adapt'.
 Except for this model, the other models require a scaling constant.
 To find an appropriate scaling constant, we will
-fit 'unidim+adapt' to each item separately
+fit 'unidim_adapt' to each item separately
 and then take the median of median point estimates
 to set the scale.
 
@@ -53,21 +54,24 @@ to set the scale.
 
 ## Physical activity flow propensity
 
-The R code below first loads **pcFactorStan**, which implicitly loads **rstan**. The two commands that follow set generally recommended options related to **rstan**. The first causes compiled **Stan** models to be cached on disk, allowing models to run more quickly after the first time. The second causes **Stan** to run multiple chains in parallel.
+The R code below first loads **rstan** and **pcFactorStan**. The next command that follows gives **rstan** permission to use all of the available CPU cores to run multiple chains in parallel.
 
 ```{r, message=FALSE}
+library(rstan)
 library(pcFactorStan)
-rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 ```
 
 Next we take a peek at the data.
 
-```{r, results='asis'}
+```{r, results='hide'}
+head(phyActFlowPropensity)
+```
+```{r, results='asis', echo=FALSE}
 kable(head(phyActFlowPropensity))
 ```
 
-These data consist of paired comparisons of 87 physical activities on 16 flow-related facets. Participants submitted two activities using free-form input. These activities were substitute into item templates. For example, the 'predict' item asked, "How predictable is the action?" with response options:
+These data consist of paired comparisons of 87 physical activities on 16 flow-related facets. The procedure was that participants submitted two activities using free-form input. These activities were substitute into item templates. For example, the 'predict' item asked, "How predictable is the action?" with response options:
 
 * A1 is much more predictable than A2.
 * A1 is somewhat more predictable than A2.
@@ -75,27 +79,28 @@ These data consist of paired comparisons of 87 physical activities on 16 flow-re
 * A2 is somewhat more predictable than A1.
 * A2 is much more predictable than A1.
 
-A "somewhat more" response is denoted with a 1 or -1
-and "much more" with a 2 or -2.
-A tie (i.e. "roughly equal") is denoted by a zero.
+A "somewhat more" response is scored 1 or -1
+and "much more" scored 2 or -2.
+A tie (i.e. "roughly equal") is scored as zero.
 We will need to analyze each item separately before
 we analyze them together. Therefore, we will start
 with 'skill'.
 
-Data is fed into **Stan** in a partially digested form, and the next block of code demonstrates how a suitable data object may be constructed using the `prepData()` function. This function automatically determines how
-many threshold parameters to estimate based on the
-range of your data.
-One thing it does not do is pick a `varCorrection` factor. The `varCorrection` determines the degree of adaption in the model. Usually setting 2.0 or 3.0 will obtain optimal results.
+Data must be fed into **Stan** in a partially digested form. The next block of code demonstrates how a suitable data object may be constructed using the `prepData()` function. This function automatically determines the
+number of threshold parameters based on the
+range observed in your data.
+One thing it does not do is pick a `varCorrection` factor. The `varCorrection` determines the degree of adaption in the model. Usually a setting of between 2.0 to 4.0 will obtain optimal results.
 
 ```{r}
 dl <- prepData(phyActFlowPropensity[,c(paste0('pa',1:2), 'skill')])
 dl$varCorrection <- 2.0
 ```
 
-Next we fit the model using the `pcStan()` function, which is a wrapper for `stan()` from **rstan**. We also choose the number of chains. By default, the first half of each chain is discarded as warm up.
+Next we fit the model using the `pcStan()` function, which is a wrapper for `stan()` from **rstan**. We also choose the number of chains.
+As is customary **Stan** procedure, the first half of each chain is discarded as warm up.
 
-```{r, message=FALSE, results='hide'}
-fit1 <- pcStan(data=dl, chains=4L)
+```{r pcStan, message=FALSE, results='hide', cache=TRUE}
+fit1 <- pcStan("unidim_adapt", data=dl)
 ```
 
 A variety of diagnostics are available to check whether the sampler ran into trouble.
@@ -133,7 +138,7 @@ ggplot(data.frame(x=theta, activity=palist, y=0.47)) +
         axis.ticks.y=element_blank())
 ```
 
-That seems like a fairly reasonable ranking for skill.
+Intuitively, this seems like a fairly reasonable ranking for skill.
 As pretty as the plot is, the main reason that we fit this model
 was to find a scaling factor that would produce a standard
 deviation close to 1.0,
@@ -144,16 +149,77 @@ print(s50)
 ```
 
 We use the median instead of the mean because `scale` is not likely to have a symmetric marginal posterior distribution.
+We obtained `r round(s50,2)`, but that value is just for one item.
+We have to perform the same procedure for every item.
+Wow, that would be really tedious ... if we did not have a function to do it for us!
+Fortunately, `calibrateItems` takes care of it and produces a table
+of the pertinent data,
 
-```{r, message=FALSE, results='hide'}
-result <- calibrateItems(phyActFlowPropensity)
+```{r calibrateItems, message=FALSE, results='hide', cache=TRUE}
+result <- calibrateItems(phyActFlowPropensity, iter=1000L)
 
 ```
 
-```{r, results='asis'}
+```{r, results='hide'}
+print(result)
+```
+```{r, results='asis', echo=FALSE}
 kable(result)
 ```
 
+The items _goal1_ and _feedback1_ ran into trouble.
+The nonzero count of divergent transitions means that these items contained too little signal to estimate. We could try again with `varCorrection=1.0`, but we are going to exclude them instead.
+The model succeeded on the rest of the items.
+I requested `iter=1000L` to demonstrate how `calibrateItems` will resample the model until the `n_eff` is large enough and the `Rhat` is small enough. Items _skill_, _predict_, and _reward_ needed 1500 samples instead of the default 1000.
+The median scale across all included items is now readily available,
+
+```{r}
+excl <- match(c('goal1','feedback1'), result$item)
+median(result[-excl,'scale'])
+```
+
+Next we will fit the covariance model. We exclude the Cholesky
+factor of the correlation matrix `rawThetaCorChol` because the
+regular correlation matrix is also available.
+```{r}
+pafp <- phyActFlowPropensity
+excl <- match(c('goal1','feedback1'), colnames(pafp))
+pafp <- pafp[,-excl]
+dl <- prepData(pafp)
+dl$scale <- median(result[-excl,'scale'])
+```
+
+```{r covariance, message=FALSE, results='hide', cache=TRUE}
+fit2 <- pcStan("covariance", data=dl, include=FALSE, pars=c('rawTheta', 'rawThetaCorChol'))
+```
+
+```{r}
+check_hmc_diagnostics(fit2)
+
+allPars <- summary(fit2, probs=0.5)$summary
+print(min(allPars[,'n_eff']))
+print(max(allPars[,'Rhat']))
+```
+The HMC diagnostics looks good, but ... oh dear!
+Something is wrong with the `n_eff` and $\widehat R$.
+Let us look more carefully,
+
+```{r}
+head(allPars[order(allPars[,'sd']),])
+```
+
+Ah ha! It looks like all the entries of the correlation matrix are reported,
+including the entries that are not stochastic but are fixed to constant values.
+We need to filter those out to get sensible results.
+
+```{r}
+excl <- match(paste0('thetaCor[',1:dl$NITEMS,',', 1:dl$NITEMS,']'), rownames(allPars))
+allPars <- allPars[-excl,]
+print(min(allPars[,'n_eff']))
+print(max(allPars[,'Rhat']))
+```
+
+Ah, much better.
 
 # Technical notes
 
@@ -165,7 +231,8 @@ If you read through the **Stan** models, you will find some
 variables prefixed with `raw`. These are special variables
 internal to the model. In particular, you should not try
 to evaluate the $\widehat R$ or effective sample size
-of `raw` parameters.
+of `raw` parameters. These parameters are best excluded
+from the sampling output.
 
 ## Unidim
 
@@ -174,7 +241,7 @@ of `raw` parameters.
 | threshold | normal(0,2)  | item response thresholds |
 | theta     | normal(0,1)  | latent score    |
 
-The 'unidim+adapt' model has a `varCorrection` constant
+The 'unidim_adapt' model has a `varCorrection` constant
 that is used to calibrate the `scale`. For multivariate models,
 `scale` should be set to the median of the item-wise scales.
 
@@ -191,6 +258,7 @@ Thresholds for all
 items are combined into a single vector.
 The prior for `theta` is multivariate normal with correlations
 `thetaCor` and standard deviations `sigma`.
+Exclude `rawTheta` and `rawThetaCorChol` from sampling.
 
 ## Factor
 
@@ -208,14 +276,7 @@ Thresholds for all items are combined into a single vector.
 and has no prior of its own.
 `factorLoadings` is in standard deviation units but can be negative.
 Similarly, `factorProp` is a signed proportion bounded between -1 and 1.
-
-# Writing your own **Stan** models
-
-We anticipate that **pcFactorModel** users may eventually want to write their own **Stan** models. The models included in **pcFactorStan** may be used as a starting point in developing custom models. The following code shows how to find and view one of these files.
-
-```{r, results='hide'}
-cat(readLines(locateModel('unidim')), sep = "\n")
-```
+Exclude `rawUnique`, `rawUniqueTheta`, `rawFactor`, and `rawLoadings` from sampling.
 
 # References
 

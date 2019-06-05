@@ -157,12 +157,12 @@ prepData <- function(df) {
 preppedDataFields <- c('NPA','NCMP','N','pa1','pa1','weight','pick','refresh')
 
 verifyIsPreppedData <- function(data) {
-  if (is.data.frame(data)) stop("Data must processed by prepData. Try prepData(data)")
+  if (is.data.frame(data)) stop("Data must be processed by prepData. Try prepData(data)")
   if (is.list(data) && all(!is.na(match(preppedDataFields, names(data))))) return()
   stop("Is data an object returned by prepData()? Seems not")
 }
 
-#' Given a model name and data, return the path to a Stan model
+#' Given a model name, return stanmodel object
 #'
 #' @template args-locate
 #' @description
@@ -176,91 +176,64 @@ verifyIsPreppedData <- function(data) {
 #' \sQuote{unidim} analyzes a single item. \sQuote{covariance} is suitable for two or more items.
 #' Once you have vetted your items with the \sQuote{unidim} and \sQuote{covariance} models,
 #' then you can try the \sQuote{factor} model.
-#' For each model, there is a \sQuote{+ll} variation. This model
+#' For each model, there is a \sQuote{_ll} variation. This model
 #' includes row-wise log likelihoods suitable for feeding to \pkg{loo}
 #' for efficient approximate leave-one-out cross-validation.
 #'
-#' There is also a special model \sQuote{unidim+adapt}.  Except for
+#' There is also a special model \sQuote{unidim_adapt}.  Except for
 #' this model, the other models require a scaling constant.  To find
 #' an appropriate scaling constant, we recommend fitting
-#' \sQuote{unidim+adapt} to each item separately and then take the
-#' median of median point estimates to set the scale. \sQuote{unidim+adapt} requires a
+#' \sQuote{unidim_adapt} to each item separately and then take the
+#' median of median point estimates to set the scale. \sQuote{unidim_adapt} requires a
 #' varCorrection constant. In general, a varCorrection of 2.0 or 3.0
 #' should provide optimal results.
 #'
-#' @return a file system path to the selected model
-#' @seealso \code{\link{pcStan}}
+#' @return An instance of S4 class \code{\link[rstan:stanmodel-class]{stanmodel}} that can be passed to \code{\link{pcStan}}.
 #' @examples
-#' locateModel()  # shows available models
-#'
-#' df1 <- prepData(phyActFlowPropensity[,1:3])
-#' df1$varCorrection <- 2.0
-#' locateModel(data=df1)
-#'
-#' df2 <- prepData(phyActFlowPropensity[,1:5])
-#' df2$scale <- 1.5
-#' locateModel(data=df2)
+#' findModel()  # shows available models
+#' findModel('unidim')
 #' @export
-locateModel <- function(model=NULL, data=NULL) {
-  if (!is.null(data)) {
-    verifyIsPreppedData(data)
-  }
-
-  extdata <- system.file("extdata", package = "pcFactorStan")
-  avail <- sub(".stan$", "", dir(extdata, pattern=".stan$"), perl=TRUE)
+findModel <- function(model=NULL) {
+  avail <- names(stanmodels)
 
   if (is.null(model)) {
-    if (is.null(data)) {
-      message(paste("Models available:", paste0(deparse(avail), collapse="")))
-      return(invisible())
-    }
-    model <- ifelse(data$NITEMS == 1, "unidim+adapt", "covariance")
+    message(paste("Models available:", paste0(deparse(avail), collapse="")))
+    return(invisible())
   }
 
-  stan_path <- file.path(extdata, ifelse(grepl("\\.stan$", model), model, paste0(model, ".stan")))
-  if(!file.exists(stan_path)) {
-    stop(paste("Stan model not found:", stan_path))
+  obj <- stanmodels[[model]]
+  if(is.null(obj)) {
+    stop(paste("Stan model not found:", model))
   }
 
-  if (!is.null(data)) {
-    if (model == 'unidim+adapt') {
-      if (is.null(data[['varCorrection']])) {
-        stop("You must choose a varCorrection. For example, data$varCorrection <- 2.0")
-      }
-    } else if (is.null(data[['scale']])) {
-      stop(paste0("You must choose a scale. For example, data$scale <- 1.8\n",
-                  "The 'unidim+adapt' model can help determine an optimal scale."))
-    }
-  }
-
-  stan_path
+  obj
 }
 
 #' Fit a pairwise comparison Stan model
 #' @template args-locate
+#' @param data a data list prepared for processing by Stan
 #' @template args-stan
-#' @description Uses \code{\link{locateModel}} to find the appropriate
-#'   model and then invokes \link[rstan]{stan}.
-#' @return A \code{\link[rstan]{stanfit-class}} object.
-#' @seealso See \code{\link[rstan]{stan}}, for which this function is
+#' @description Uses \code{\link{findModel}} to find the appropriate
+#'   model and then invokes \link[rstan:sampling]{sampling}.
+#' @return A \code{\link[rstan:stanfit-class]{stanfit}} object.
+#' @seealso See \code{\link[rstan:sampling]{sampling}}, for which this function is
 #'   a wrapper, for additional options. See \code{\link{prepData}} to
 #'   create a suitable data list.  See
-#'   \code{\link[rstan]{print.stanfit}} for ways of getting tables
+#'   \code{\link[rstan:print.stanfit]{print.stanfit}} for ways of getting tables
 #'   summarizing parameter posteriors.
 #'
-#' @return An object of S4 class \code{\link[rstan]{stanfit}}.
+#' @return An object of S4 class \code{\link[rstan:stanfit-class]{stanfit}}.
 #' @seealso \code{\link{calibrateItems}}
 #' @examples
 #' dl <- prepData(phyActFlowPropensity[,c(1,2,3)])
 #' dl$varCorrection <- 2.0
-#' \dontrun{pcStan(data=dl)}
-#' @importFrom rstan stan
+#' \dontrun{pcStan('unidim_adapt', data=dl)}
+#' @importFrom rstan sampling
 #' @export
-pcStan <- function(model=NULL, data, ...) {
+pcStan <- function(model, data, ...) {
   verifyIsPreppedData(data)
-  stan_path <- locateModel(model, data)
-  message("Using ", file.path(stan_path))
-  rstan::stan(stan_path, data = data, ...)
+  obj <- findModel(model)
+  rstan::sampling(obj, data = data, ...)
 }
 
 #' Determine the optimal scale constant for a set of items
@@ -274,7 +247,7 @@ pcStan <- function(model=NULL, data, ...) {
 #' @description
 #'
 #' Data are passed through \code{\link{filterGraph}} and \code{\link{normalizeData}}.
-#' Then the \sQuote{unidim+adapt} model is fit to each item individually.
+#' Then the \sQuote{unidim_adapt} model is fit to each item individually.
 #' A larger \code{varCorrection} will obtain a more accurate
 #' \code{scale}, but is also more likely to produce an intractable
 #' model. A good compromise is between 2.0 and 4.0.
@@ -292,7 +265,7 @@ pcStan <- function(model=NULL, data, ...) {
 #'  \item{scale}{Median marginal posterior of \code{scale}}
 #'  \item{thetaVar}{Median variance of theta (latent scores)}
 #'  }
-#' @seealso \code{\link[rstan]{check_hmc_diagnostics}}
+#' @seealso \code{\link[rstan:check_hmc_diagnostics]{check_hmc_diagnostics}}
 #' @template ref-vehtari2019
 #' @examples
 #' \dontrun{
@@ -300,6 +273,7 @@ pcStan <- function(model=NULL, data, ...) {
 #' print(result)
 #' }
 #' @importMethodsFrom rstan summary
+#' @importFrom rstan get_num_divergent get_max_treedepth_iterations get_low_bfmi_chains
 #' @export
 calibrateItems <- function(df, iter=2000L, chains=4L, varCorrection=3.0, maxAttempts=5L, ...) {
   df <- filterGraph(df)
@@ -322,7 +296,7 @@ calibrateItems <- function(df, iter=2000L, chains=4L, varCorrection=3.0, maxAtte
       dl <- prepCleanData(df[,c(vCol, itemCol)])
       dl$varCorrection <- varCorrection
       result[rx,'iter'] <- ifelse(is.na(result[rx,'iter']), iter, result[rx,'iter'] * 1.5)
-      fit1 <- suppressWarnings(pcStan(data=dl, chains=chains, iter=result[rx,'iter']))
+      fit1 <- suppressWarnings(pcStan("unidim_adapt", data=dl, chains=chains, iter=result[rx,'iter']))
       result[rx,'divergent'] <- get_num_divergent(fit1)
       result[rx,'treedepth'] <- sum(get_max_treedepth_iterations(fit1))
       result[rx,'low_bfmi'] <- length(get_low_bfmi_chains(fit1))

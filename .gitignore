@@ -1,5 +1,4 @@
 /.Rproj.user
-/NAMESPACE
 /man/pcFactorStan-package.Rd
 .Rproj.user
 /man/itemModelExplorer.Rd
@@ -13,6 +12,6 @@
 /man/pcStan.Rd
 /man/prepCleanData.Rd
 /man/prepData.Rd
-/man/locateModel.Rd
+/man/findModel.Rd
 /man/calibrateItems.Rd
 inst/doc

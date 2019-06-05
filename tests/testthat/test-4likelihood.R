@@ -3,51 +3,50 @@ context("test-4likelihood")
 skip_on_cran()
 
 RNGversion("3.5")
+library(rstan)  # for get_logposterior
 
 test_that("unidim", {
   # As of rstan 2.19, cores=0 suppresses the warnings about chain convergence.
 
+  expect_error(pcStan('unidim', data=phyActFlowPropensity[,1:3]),
+               "Data must be processed by prepData")
+
   dl <- prepData(phyActFlowPropensity[,c(1,2,3)])
 
-  expect_error(locateModel("unidim+adapt", data=dl),
-               "You must choose a varCorrection.")
-  expect_error(locateModel("unidim+ll", data=dl),
-               "You must choose a scale.")
-
   dl$varCorrection <- 2.0
-  m1 <- stan_model(locateModel("unidim+adapt", data=dl))
+  m1 <- findModel("unidim_adapt")
   f1 <- sampling(m1, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
-  expect_equal(get_logposterior(f1)[[1]], -3846.102, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f1)[[1]], -3565.662, tolerance=1e-2, scale=1)
 
   dl$scale <- 1.0
-  m2 <- stan_model(locateModel("unidim+ll", data=dl))
+  m2 <- findModel("unidim_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
-  expect_equal(get_logposterior(f2)[[1]], -2921.243, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -4289.26, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
-               c(-14.382, -3.49, -2.01, -1.338, -0.032), tolerance=1e-2, scale=1)
+               c(-14.374, -6.389, -2.815, -1.555, -0.025), tolerance=1e-2, scale=1)
 })
 
 test_that("covariance", {
   dl <- prepData(phyActFlowPropensity)
   dl$scale <- 1.5
-  m2 <- stan_model(locateModel("covariance+ll", data=dl))
+  m2 <- findModel("covariance_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
-  expect_equal(get_logposterior(f2)[[1]], -104708.629, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -111585.92, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
-               c(-134.39, -4.687, -2.096, -1.283, 0), tolerance=1e-2, scale=1)
+               c(-167.98, -6.065, -2.602, -1.573, 0), tolerance=1e-2, scale=1)
 })
 
 test_that("factor", {
   dl <- prepData(phyActFlowPropensity)
   dl$scale <- 1.5
-  m2 <- stan_model(locateModel("factor+ll", data=dl))
+  m2 <- findModel("factor_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
-  expect_equal(get_logposterior(f2)[[1]], -114116.344, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -114760.73, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
-               c(-60.806, -10.001, -4.726, -1.691, 0), tolerance=1e-2, scale=1)
+               c(-65.798, -9.749, -4.913, -2.077, 0), tolerance=1e-2, scale=1)
 })
 
 test_that("mixed thresholds", {
@@ -66,12 +65,12 @@ test_that("mixed thresholds", {
   df <- filterGraph(df)
   dl <- prepCleanData(df)
   dl$scale <- 1.5
-  m2 <- stan_model(locateModel("covariance+ll", data=dl))
+  m2 <- findModel("covariance_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
-  expect_equal(get_logposterior(f2)[[1]], -5308.334, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -5633.51, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
-               c(-40.229, -3.952, -2.563, -1.368, -0.002), tolerance=1e-2, scale=1)
+               c(-41.785, -4.048, -1.776, -0.457, 0), tolerance=1e-2, scale=1)
 
   df <- normalizeData(df, .palist=sample(palist, 10))
   dl <- prepCleanData(df)

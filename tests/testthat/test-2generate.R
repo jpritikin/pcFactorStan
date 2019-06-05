@@ -6,7 +6,7 @@ test_that("generateItem", {
   set.seed(1)
   df <- roundRobinGraph(letters[1:5], 40)
   df <- generateItem(df)
-  expect_equivalent(c(table(df$i1)), c(16, 17, 7))
+  expect_equivalent(c(table(df$i1)), c(7,17,16))
 
   expect_error(generateItem(df, name="i1"),
                "Colname i1 is already taken")

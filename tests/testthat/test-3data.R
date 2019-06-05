@@ -35,23 +35,7 @@ test_that("prepCleanData", {
                     c(405L, 79L, 33L, 10L, 12L, 6L, 6L, 4L, 1L, 1L, 1L, 2L, 1L, 1L,  2L, 1L))
 })
 
-test_that("locateModel", {
-  expect_message(locateModel(),
-                 "Models available")
-  expect_error(locateModel(data=phyActFlowPropensity[,1:3]),
-               "Data must processed by prepData")
-
-  df1 <- prepData(phyActFlowPropensity[,1:3])
-  expect_error(locateModel(data=df1),
-               "You must choose a varCorrection")
-  df1$varCorrection <- 2.0
-  expect_match(locateModel(data=df1), "unidim+adapt", fixed=TRUE)
-
-  df2 <- prepData(phyActFlowPropensity[,1:5])
-  expect_error(locateModel(data=df2),
-               "You must choose a scale")
-  df2$scale <- 1.5
-  expect_match(locateModel(data=df2), "covariance", fixed=TRUE)
-
-  expect_error(locateModel("asdg"), "Stan model not found")
+test_that("findModel", {
+  expect_message(findModel(), "Models available")
+  expect_error(findModel("asdg"), "Stan model not found")
 })
