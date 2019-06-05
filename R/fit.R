@@ -12,7 +12,7 @@
 #' Alice. \code{normalizeData} assigns an arbitrary order to all
 #' vertices and reorders vertices column-wise to match,
 #' flipping signs as needed.
-#' 
+#'
 #' @examples
 #' df <- data.frame(pa1=NA, pa2=NA, i1=c(1, -1))
 #' df[1,paste0('pa',1:2)] <- c('a','b')
@@ -43,7 +43,7 @@ normalizeData <- function(df, ..., .palist=NULL, .sortRows=TRUE) {
 }
 
 #' Transforms data into a form tailored for efficient evaluation by Stan
-#' 
+#'
 #' Vertex names, if not already factors, are converted to
 #' factors.  The number of thresholds per item is determined by the
 #' largest absolute response value.  Missing responses are filtered
@@ -54,7 +54,7 @@ normalizeData <- function(df, ..., .palist=NULL, .sortRows=TRUE) {
 #' @details
 #' Note: Reordering of responses is likely unless something like
 #' \code{\link{normalizeData}} has been used with \code{.sortRows=TRUE}.
-#' 
+#'
 #' @template args-df
 #'
 #' @return a data list suitable for passing as the \code{data}
@@ -67,7 +67,7 @@ normalizeData <- function(df, ..., .palist=NULL, .sortRows=TRUE) {
 #' @export
 prepCleanData <- function(df) {
   palist <- verifyIsData(df)
-  
+
   if (!is.factor(df$pa1)) {
     df$pa1 <- factor(df$pa1, levels=palist)
     df$pa2 <- factor(df$pa2, levels=palist)
@@ -128,7 +128,7 @@ prepCleanData <- function(df) {
 }
 
 #' Transforms data into a form tailored for efficient evaluation by Stan
-#' 
+#'
 #' @template args-df
 #'
 #' @description
@@ -139,14 +139,14 @@ prepCleanData <- function(df) {
 #' out.  Responses on the same pair of vertices on the same item are
 #' grouped together.  Within a vertex pair and item, responses
 #' are ordered from negative to positive.
-#' 
+#'
 #' @return a data list suitable for passing as the \code{data}
 #'   argument to \code{\link{pcStan}} or \code{\link[rstan]{stan}}
 #' @family data preppers
 #' @examples
 #' df <- prepData(phyActFlowPropensity)
 #' str(df)
-#' 
+#'
 #' @export
 prepData <- function(df) {
   df <- filterGraph(df)
@@ -166,12 +166,12 @@ verifyIsPreppedData <- function(data) {
 #'
 #' @template args-locate
 #' @description
-#' 
+#'
 #' This is a convenience function to help you look up the path to an
 #' appropriate model for your data.
 #'
 #' @details
-#' 
+#'
 #' There are essentially three models: \sQuote{unidim}, \sQuote{covariance}, and \sQuote{factor}.
 #' \sQuote{unidim} analyzes a single item. \sQuote{covariance} is suitable for two or more items.
 #' Once you have vetted your items with the \sQuote{unidim} and \sQuote{covariance} models,
@@ -187,7 +187,7 @@ verifyIsPreppedData <- function(data) {
 #' median of median point estimates to set the scale. \sQuote{unidim+adapt} requires a
 #' varCorrection constant. In general, a varCorrection of 2.0 or 3.0
 #' should provide optimal results.
-#' 
+#'
 #' @return a file system path to the selected model
 #' @seealso \code{\link{pcStan}}
 #' @examples
@@ -205,7 +205,7 @@ locateModel <- function(model=NULL, data=NULL) {
   if (!is.null(data)) {
     verifyIsPreppedData(data)
   }
-  
+
   extdata <- system.file("extdata", package = "pcFactorStan")
   avail <- sub(".stan$", "", dir(extdata, pattern=".stan$"), perl=TRUE)
 
@@ -286,6 +286,7 @@ pcStan <- function(model=NULL, data, ...) {
 #' result <- calibrateItems(phyActFlowPropensity)
 #' print(result)
 #' }
+#' @importMethodsFrom rstan summary
 #' @export
 calibrateItems <- function(df, iter=2000L, chains=4L, varCorrection=3.0, maxAttempts=5L, ...) {
   df <- filterGraph(df)
@@ -298,7 +299,7 @@ calibrateItems <- function(df, iter=2000L, chains=4L, varCorrection=3.0, maxAtte
                         divergent=NA, treedepth=NA, low_bfmi=NA, n_eff=NA, Rhat=NA, scale=NA)
   for (attempt in 1:maxAttempts) {
     for (rx in 1:nrow(result)) {
-      if (!is.na(result[rx,'divergent']) && 
+      if (!is.na(result[rx,'divergent']) &&
           (result[rx,'divergent'] || result[rx,'treedepth'] || result[rx,'low_bfmi'])) next
       if (!is.na(result[rx, 'Rhat']) &&
           result[rx, 'Rhat'] < 1.015 && result[rx, 'n_eff'] > 100 * chains) next
