@@ -63,8 +63,8 @@ options(mc.cores = parallel::detectCores())
 
 Next we take a peek at the data.
 
-```{r}
-head(phyActFlowPropensity)
+```{r, results='asis'}
+kable(head(phyActFlowPropensity))
 ```
 
 These data consist of paired comparisons of 87 physical activities on 16 flow-related facets. Participants submitted two activities using free-form input. These activities were substitute into item templates. For example, the 'predict' item asked, "How predictable is the action?" with response options:
@@ -150,8 +150,8 @@ result <- calibrateItems(phyActFlowPropensity)
 
 ```
 
-```{r}
-print(result)
+```{r, results='asis'}
+kable(result)
 ```
 
 
