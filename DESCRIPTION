@@ -28,6 +28,6 @@ Suggests:
 SystemRequirements: GNU make
 VignetteBuilder: knitr
 NeedsCompilation: yes
-URL: https://github.com/jpritikin/fcFactorStan
-BugReports: https://github.com/jpritikin/fcFactorStan/issues
+URL: https://github.com/jpritikin/pcFactorStan
+BugReports: https://github.com/jpritikin/pcFactorStan/issues
 RoxygenNote: 6.1.1
