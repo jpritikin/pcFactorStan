@@ -1,5 +1,4 @@
 Title:       pcFactorStan
-Subtitle:    Pairwise Comparison Factor Model using rstan
 
 [<img src="https://raw.githubusercontent.com/stan-dev/logos/master/logo_tm.png" width=100 alt="Stan Logo"/>](http://mc-stan.org)
 
