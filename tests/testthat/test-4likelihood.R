@@ -84,7 +84,7 @@ test_that("mixed thresholds", {
 
 test_that("calibrateItems", {
   pafp <- phyActFlowPropensity[,1:5]
-  result <- calibrateItems(pafp, iter=500L)
+  result <- calibrateItems(pafp, iter=1000L)
   expect_equal(nrow(result), 3)
   expect_true(all(result[,'n_eff'] > 400))
   expect_true(all(result[,'Rhat'] < 1.015))
