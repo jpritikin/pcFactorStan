@@ -16,15 +16,15 @@ test_that("unidim", {
   dl$varCorrection <- 2.0
   m1 <- findModel("unidim_adapt")
   f1 <- sampling(m1, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
-  expect_equal(get_logposterior(f1)[[1]], -3565.662, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f1)[[1]], -53935.71, tolerance=1e-2, scale=1)
 
   dl$scale <- 1.0
   m2 <- findModel("unidim_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
-  expect_equal(get_logposterior(f2)[[1]], -4289.26, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -3174.317, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
-               c(-14.374, -6.389, -2.815, -1.555, -0.025), tolerance=1e-2, scale=1)
+               c(-14.4, -4.84, -2.343, -0.792, -0.26), tolerance=1e-2, scale=1)
 })
 
 test_that("covariance", {
@@ -32,10 +32,10 @@ test_that("covariance", {
   dl$scale <- 1.5
   m2 <- findModel("covariance_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
-  expect_equal(get_logposterior(f2)[[1]], -111585.92, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -89848.91, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
-               c(-167.98, -6.065, -2.602, -1.573, 0), tolerance=1e-2, scale=1)
+               c(-103.731, -5.783, -2.97, -1.486, 0), tolerance=1e-2, scale=1)
 })
 
 test_that("factor", {
@@ -43,10 +43,10 @@ test_that("factor", {
   dl$scale <- 1.5
   m2 <- findModel("factor_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
-  expect_equal(get_logposterior(f2)[[1]], -114760.73, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -100692.33, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
-               c(-65.798, -9.749, -4.913, -2.077, 0), tolerance=1e-2, scale=1)
+               c(-48.981, -8.852, -4.65, -1.873, 0), tolerance=1e-2, scale=1)
 })
 
 test_that("mixed thresholds", {

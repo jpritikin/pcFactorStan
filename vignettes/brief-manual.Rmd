@@ -14,6 +14,7 @@ vignette: >
 ```{r, include = FALSE}
 library(knitr)
 library(ggplot2)
+library(reshape2)
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -122,9 +123,11 @@ Again, everything looks good. If the targets values were not reached
 then we would sample the model again with more iterations.
 Time for a plot,
 
-```{r}
+```{r skill, cache=TRUE}
+library(ggplot2)
+
 theta <- summary(fit1, pars=c("theta"), probs=c())$summary[,'mean']
-palist <- levels(phyActFlowPropensity$pa1)
+palist <- levels(filterGraph(phyActFlowPropensity)$pa1)
 
 ggplot(data.frame(x=theta, activity=palist, y=0.47)) +
   geom_point(aes(x=x),y=0) +
@@ -168,9 +171,9 @@ kable(result)
 ```
 
 The items _goal1_ and _feedback1_ ran into trouble.
-The nonzero count of divergent transitions means that these items contained too little signal to estimate. We could try again with `varCorrection=1.0`, but we are going to exclude them instead.
+The nonzero count of divergent transitions and low_bfmi means that these items contained too little signal to estimate. We could try again with `varCorrection=1.0`, but we are going to exclude them instead.
 The model succeeded on the rest of the items.
-I requested `iter=1000L` to demonstrate how `calibrateItems` will resample the model until the `n_eff` is large enough and the `Rhat` is small enough. Items _skill_, _predict_, and _reward_ needed 1500 samples instead of the default 1000.
+I requested `iter=1000L` to demonstrate how `calibrateItems` will resample the model until the `n_eff` is large enough and the `Rhat` is small enough. Items _skill_ and _predict_ (among others) needed 1500 samples instead of the default 1000.
 The median scale across all included items is now readily available,
 
 ```{r}
@@ -219,14 +222,175 @@ print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
 
-Ah, much better.
+Ah, much better. Now we can inspect the correlation matrix. There are
+many ways to visualize a correlation matrix. One of my favorite
+ways is to plot it using the **qgraph** package,
+
+```{r}
+itemNames <- colnames(pafp)[-(1:2)]
+tc <- summary(fit2, pars=c("thetaCor"), probs=c(.5))$summary[,'50%']
+tcor <- matrix(tc, length(itemNames), length(itemNames))
+dimnames(tcor) <- list(itemNames, itemNames)
+
+library(qgraph)
+qgraph(tcor, layout = "spring", graph = "cor", labels=colnames(tcor),
+       legend.cex = 0.3,
+       cut = 0.3, maximum = 1, minimum = 0, esize = 20,
+       vsize = 7, repulsion = 0.8)
+```
+
+Based on this plot and theoretical considerations,
+I decided to exclude _spont_, _control_, _evaluated_, and _waiting_
+from the factor model.
+A detailed rationale for why these items are excluded and not others
+will be presented in a forthcoming article.
+For now, let us focus on the mechanics of the next step in
+our analyses.
+
+```{r}
+itemNames <- setdiff(itemNames, c('spont','control','evaluated','waiting'))
+pafp <- pafp[,c(paste0('pa',1:2), itemNames)]
+dl <- prepData(pafp)
+dl$scale <- median(result[-excl,'scale'])  # close enough
+```
+
+```{r factor, message=FALSE, results='hide', cache=TRUE}
+fit3 <- pcStan("factor", data=dl, include=FALSE,
+               pars=c('rawUnique', 'rawUniqueTheta', 'rawFactor', 'rawLoadings'))
+```
+
+```{r}
+check_hmc_diagnostics(fit3)
+
+allPars <- summary(fit3, probs=0.5)$summary
+print(min(allPars[,'n_eff']))
+print(max(allPars[,'Rhat']))
+```
+
+The maximum $\widehat R$ is too high. We need to try again with more iterations,
+
+```{r factor2, message=FALSE, results='hide', cache=TRUE}
+fit3 <- pcStan("factor", data=dl, include=FALSE, iter=4000L,
+               pars=c('rawUnique', 'rawUniqueTheta', 'rawFactor', 'rawLoadings'))
+```
+
+```{r}
+check_hmc_diagnostics(fit3)
+
+allPars <- summary(fit3, probs=0.5)$summary
+print(min(allPars[,'n_eff']))
+print(max(allPars[,'Rhat']))
+```
+
+Looks good! Let us plot the marginal posterior distributions of the factor proportions,
+
+```{r factorProp, cache=TRUE}
+library(reshape2)
+
+prop <- summary(fit3, pars='factorProp', probs=c(0.1, 0.5, 0.9))$summary[,c('10%','50%','90%')]
+colnames(prop) <- paste0('q',c(10,50,90))
+prop <- as.data.frame(prop)
+prop$item <- factor(itemNames)
+
+rawProp <- extract(fit3, pars=c("factorProp"))[[1]]
+colnames(rawProp) <- itemNames
+rawProp <- rawProp[sample.int(nrow(rawProp), 500),]
+rawPropTall <- melt(rawProp, variable.name='item')
+colnames(rawPropTall)[2] <- c('item')
+
+ggplot() +   geom_vline(xintercept=0, color="green") +
+  geom_jitter(data=rawPropTall, aes(value, item), height = 0.35, alpha=.05) +
+  geom_segment(data=prop, aes(y=item, yend=item, x=q10, xend=q90),
+               color="yellow", alpha=.5) +
+  geom_point(data=prop, aes(x=q50, y=item), color="red", size=1) +
+  theme(axis.title.y=element_blank())
+```
+
+We can also look at item response curves,
+
+```{r responseCurve}
+
+thresholdVec <- summary(fit3, pars='threshold', probs=c())$summary[,'mean']
+thresholds <- matrix(thresholdVec, nrow=2, dimnames=list(NULL, itemNames))
+
+softmax <- function(y) exp(y) / sum(exp(y))
+draw1 <- function(scale, th, item) {
+  tdiff <- seq(-2.5/scale, 2.5/scale, .05/scale)
+  gr <- expand.grid(tdiff=tdiff, category=c("much more","somewhat more", 'equal',
+    "somewhat less", "much less"), p=NA, item=item)
+  gg <- matrix(c(0, rev(cumsum(th)), -cumsum(th)), ncol=5, nrow=length(tdiff), byrow=TRUE)
+  gg[,2:5] <-  (gg[,2:5] + scale * tdiff)
+  gg <- t(apply(gg, 1, cumsum))
+  gg <- t(apply(gg, 1, softmax))
+  for (lev in 1:length(levels(gr$category))) {
+    gr[gr$category == levels(gr$category)[lev],'p'] <- gg[,lev]
+  }
+  geom_line(data=gr, aes(x=tdiff,y=p,color=category,linetype=category), size=.1, alpha=.2)
+}
+
+rawThreshold <- extract(fit3, pars=c("threshold"))[[1]]
+rawThreshold <- rawThreshold[sample.int(nrow(rawThreshold), 50),]
+
+pl <- ggplot() + xlab("difference in latent score (logits)") + ylab("probability") +
+  ylim(0,1) + facet_wrap(~item)
+for (cx in 1:nrow(rawThreshold)) {
+    for (ix in 1:length(itemNames)) {
+       pl <- pl + draw1(dl$scale, rawThreshold[cx,c(ix*2-1,ix*2)], itemNames[ix])
+    }
+}
+print(pl)
+```
+
+```{r, results='hide'}
+print(thresholds)
+```
+```{r, results='asis', echo=FALSE}
+kable(thresholds)
+```
+
+Finally, we can plot the factor scores. Activities with small sample
+sizes are retained by `filterGraph` if they connect other activities
+because they contribute information to the model. However, when we
+look at the per-activity factor scores, we can limit ourselves to
+activities with a sample size of at least 11.
+
+```{r activities, cache=TRUE}
+orig <- filterGraph(pafp)$pa1
+pa11 <- filterGraph(pafp, minDifferent=11L)$pa1
+
+fs <- summary(fit3, pars='factor', probs=c(0.1, 0.5, 0.9))$summary[,c('10%','50%','90%')]
+colnames(fs) <- paste0('q',c(10,50,90))
+fs <- fs[match(levels(pa11), levels(orig)),]
+fs <- as.data.frame(fs)
+fs$activity <- levels(pa11)
+fs$activity <- factor(fs$activity, levels=levels(pa11)[order(fs$q50)])
+
+rawFs <- extract(fit3, pars=c("factor"))[[1]]
+rawFs <- rawFs[,match(levels(pa11), levels(orig))]
+colnames(rawFs) <- levels(pa11)
+rawFs <- rawFs[sample.int(nrow(rawFs), 500),]
+rawFsTall <- melt(rawFs, variable.name='activity')
+colnames(rawFsTall)[2] <- c('activity')
+rawFsTall$activity <- factor(as.character(rawFsTall$activity),
+                         levels=levels(pa11)[order(fs$q50)])
+
+ggplot() +   geom_vline(xintercept=0, color="green") +
+  geom_jitter(data=rawFsTall, aes(value, activity), height = 0.35, alpha=.05) +
+  geom_segment(data=fs, aes(y=activity, yend=activity, x=q10, xend=q90),
+               color="yellow", alpha=.5) +
+  geom_point(data=fs, aes(x=q50, y=activity), color="red", size=1) +
+  theme(axis.title.y=element_blank())
+
+```
+
 
 # Technical notes
 
-Given that my background is more in programming than math,
-I am not a fan of the greek letters used by
-mathematicians with such enthusiasm.
+Given that my background is more in software than math,
+I am not a fan of the greek letters used
+with such enthusiasm by mathematicians.
 When I name variables, I favor the expressive over the succinct.
+
 If you read through the **Stan** models, you will find some
 variables prefixed with `raw`. These are special variables
 internal to the model. In particular, you should not try

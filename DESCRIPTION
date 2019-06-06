@@ -24,7 +24,7 @@ Suggests:
     testthat,
     shiny,
     ggplot2,
-    covr
+    covr, qgraph
 SystemRequirements: GNU make
 VignetteBuilder: knitr
 NeedsCompilation: yes

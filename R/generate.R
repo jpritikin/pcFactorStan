@@ -57,7 +57,7 @@ assertNameUnused <- function(df, name) {
 #' players for each of these games. We may also suspect that there is
 #' a latent board game skill that accounts for some proportion of the
 #' variance in the per-board game rankings.
-#' 
+#'
 #' @template detail-response
 #' @template ref-masters1982
 #' @template ref-silver2018
@@ -105,7 +105,7 @@ generateFactorItems <- function(df, prop, th=0.5, scale=1, name) {
 }
 
 #' Generate pairwise comparison data with random correlations between items
-#' 
+#'
 #' @inheritParams generateItem
 #' @param numItems how many items to create
 #' @description
@@ -113,7 +113,7 @@ generateFactorItems <- function(df, prop, th=0.5, scale=1, name) {
 #' If you need access to the correlation matrix used to generate the
 #' absolute latent scores then you will need to generate them yourself.
 #' This is not difficult. See how in the example.
-#' 
+#'
 #' @template detail-response
 #' @template ref-masters1982
 #' @family item generators
@@ -129,7 +129,7 @@ generateFactorItems <- function(df, prop, th=0.5, scale=1, name) {
 #' theta <- rmvnorm(length(palist), sigma=trueCor)
 #' dimnames(theta) <- list(palist, paste0('i', 3 + 1:numItems))
 #' df <- generateItem(df, theta)
-#' 
+#'
 #' @export
 #' @importFrom mvtnorm rmvnorm
 #' @importFrom stats cov2cor rWishart
@@ -149,7 +149,7 @@ generateCovItems <- function(df, numItems, th=0.5, scale=1, name) {
 
 #' Generate pairwise comparison data for one or more items given
 #' absolute latent scores
-#' 
+#'
 #' @template args-df
 #' @param theta a vector or matrix of absolute latent scores. See details below.
 #' @param th a vector of thresholds
@@ -161,12 +161,12 @@ generateCovItems <- function(df, numItems, th=0.5, scale=1, name) {
 #' scores. To add multiple items at a time, \code{theta} should be a
 #' matrix with one item in each column. Item names can be given as
 #' the colnames of \code{theta}.
-#' 
+#'
 #' The interpretation of \code{theta} depends on the context where the
 #' data were generated. For example, in chess, \code{theta} represents
 #' unobserved chess skill that is partially revealed by match
 #' outcomes.
-#' 
+#'
 #' The graph can be regarded as undirected, but data are generated
 #' relative to the order of vertices in the row. Vertices do not
 #' commute. For example, a \code{-1} for vertices \sQuote{a} and
@@ -310,13 +310,13 @@ twoLevelGraph <- function(name, N, shape1=0.8, shape2=0.5) {
 }
 
 #' Filter graph to remove vertices that are not well connected
-#' 
+#'
 #' @template args-df
 #' @param minAny the minimum number of edges
 #' @param minDifferent the minimum number of vertices
 #'
 #' @description
-#' 
+#'
 #' Vertices not part of the largest connected component are excluded.
 #' Vertices that have fewer than \code{minAny} edges and are not
 #' connected to \code{minDifferent} or more different vertices are
@@ -334,18 +334,18 @@ twoLevelGraph <- function(name, N, shape1=0.8, shape2=0.5) {
 #' such as \eqn{B < A < C}, by which the model can infer that \eqn{B < C}.
 #' Therefore, per-activity sample size is less of a concern
 #' when the graph is densely connected.
-#' 
+#'
 #' A young novice asked the wise master, "Why is 11 the default \code{minAny} instead of 10?"
 #' The master answered, "Because 11 is a prime number."
 #'
 #' @return The same graph excluding some
 #'   vertices.
-#' 
+#'
 #' @importFrom igraph graph_from_edgelist components incident
 #' @examples
 #' df <- filterGraph(phyActFlowPropensity[,c(paste0('pa',1:2),'predict')])
 #' head(df)
-#' 
+#'
 #' @export
 filterGraph <- function(df, minAny=11L, minDifferent=2L) {
   verifyIsData(df)
@@ -365,6 +365,10 @@ filterGraph <- function(df, minAny=11L, minDifferent=2L) {
   good <- setdiff(good, weak)
 
   df <- df[df$pa1 %in% good & df$pa2 %in% good,]
+  for (v in paste0('pa',1:2)) {
+    # remove weak from factor levels
+    df[[v]] <- factor(as.character(df[[v]]), good)
+  }
   attr(df, 'disconnected') <- disconnected
   attr(df, 'weak') <- weak
   class(df) <- c("filteredGraph", class(df))

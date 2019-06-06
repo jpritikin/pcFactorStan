@@ -44,6 +44,7 @@ test_that("filterGraph", {
   df <- filterGraph(df)
   expect_equal(nrow(df), 11)
   expect_equal(attr(df, 'weak'), "c")
+  expect_equal(levels(df$pa1), c('a','b'))
 
   df <- data.frame(pa1=rep(NA,15), pa2=NA)
   for (rx in 1:11) {
@@ -55,8 +56,10 @@ test_that("filterGraph", {
   df[15,] <- c('a','c')
   df <- filterGraph(df)
   expect_equal(nrow(df), 15)
+  expect_equal(length(levels(df$pa1)), 3)
 
   df <- filterGraph(phyActFlowPropensity[,c(1,2)])
   expect_equal(length(attr(df, 'disconnected')), 8)
   expect_equal(length(attr(df, 'weak')), 18)
+  expect_equal(length(levels(df$pa1)), 61)
 })
