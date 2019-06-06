@@ -21,6 +21,14 @@ test_that("generateItem", {
                "No latent score for: a", fixed=TRUE)
 
   expect_error(generateItem('i1'), "df is not a data.frame")
+
+  theta <- matrix(rnorm(10), nrow=5,
+                  dimnames=list(letters[1:5], c('i2','i3')))
+  expect_error(generateItem(df, theta, name=c('apple', 'banana')),
+               "Mismatch between name and colnames(theta)", fixed=TRUE)
+  colnames(theta) <- NULL
+  df <- generateItem(df, theta)
+  expect_equal(colnames(df), c(paste0('pa',1:2), paste0('i',1:3)))
 })
 
 test_that("generateCovItems", {

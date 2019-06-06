@@ -81,3 +81,13 @@ test_that("mixed thresholds", {
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
                fivenum(extract(f3)$log_lik[1,]), tolerance=1e-2, scale=1)
 })
+
+test_that("calibrateItems", {
+  pafp <- phyActFlowPropensity[,1:5]
+  result <- calibrateItems(pafp, iter=500L)
+  expect_equal(nrow(result), 3)
+  expect_true(all(result[,'n_eff'] > 400))
+  expect_true(all(result[,'Rhat'] < 1.015))
+  expect_equal(result[,'scale'], c(.64, .61, .50),
+               tolerance=1e-2, scale=1)
+})

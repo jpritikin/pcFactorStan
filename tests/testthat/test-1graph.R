@@ -34,6 +34,14 @@ test_that("twoLevelGraph", {
 })
 
 test_that("filterGraph", {
+  junk <- data.frame(bob=rep(1,3), alice=rep(2,3))
+  expect_error(filterGraph(junk),
+               "Expected columns pa1, pa2 to contain the vertex names")
+  junk <- data.frame(pa1=factor(c('a','b')),
+                     pa2=factor(c('b','c')))
+  expect_error(filterGraph(junk),
+               "Some levels(pa1) don't match levels(pa2)", fixed=TRUE)
+
   df <- data.frame(pa1=rep(NA,15), pa2=NA)
   for (rx in 1:11) {
     df[rx,] <- c('a','b')
@@ -45,6 +53,8 @@ test_that("filterGraph", {
   expect_equal(nrow(df), 11)
   expect_equal(attr(df, 'weak'), "c")
   expect_equal(levels(df$pa1), c('a','b'))
+  expect_message(print(df),
+                 'too weakly connected: "c"')
 
   df <- data.frame(pa1=rep(NA,15), pa2=NA)
   for (rx in 1:11) {
@@ -62,4 +72,8 @@ test_that("filterGraph", {
   expect_equal(length(attr(df, 'disconnected')), 8)
   expect_equal(length(attr(df, 'weak')), 18)
   expect_equal(length(levels(df$pa1)), 61)
+  expect_message(print(head(df)),
+                 "not part of the largest connected component")
+  expect_message(print(head(df)),
+                 "too weakly connected")
 })

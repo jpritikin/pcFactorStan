@@ -28,6 +28,13 @@ test_that("normalizeData", {
 })
 
 test_that("prepCleanData", {
+  df <- data.frame(pa1=NA, pa2=NA, i1=c(1, -1))
+  df[1,paste0('pa',1:2)] <- c('a','b')
+  df[2,paste0('pa',1:2)] <- c('b','a')
+  dl <- prepCleanData(df)
+  expect_equal(dl$pa1, c(1,2))
+  expect_equal(dl$pa2, c(2,1))
+
   df <- phyActFlowPropensity[,c(1,2,7)]
   dl <- prepCleanData(df)
   expect_equivalent(c(table(dl$refresh)), c(223, 342))

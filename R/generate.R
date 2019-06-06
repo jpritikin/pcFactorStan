@@ -22,7 +22,7 @@ pairMap <- function(n) {
 verifyIsData <- function(df) {
   if (!is.data.frame(df)) stop("df is not a data.frame")
   if (any(is.na(match(paste0('pa',1:2), colnames(df))))) {
-    stop("Expected pa1, pa2 as the first two columns")
+    stop("Expected columns pa1, pa2 to contain the vertex names")
   }
   if (is.factor(df$pa1) && is.factor(df$pa2)) {
     if (length(levels(df$pa1)) != length(levels(df$pa2)) ||
