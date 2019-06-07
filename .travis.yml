@@ -31,8 +31,8 @@ before_script:
 
 script: 
   - |
-    R CMD build .
-    travis_wait 59 R CMD check pcFactorStan*tar.gz
+    R CMD build --no-build-vignettes .
+    travis_wait 59 R CMD check --ignore-vignettes pcFactorStan*tar.gz
 
 after_success:
   - travis_wait 40 Rscript -e 'covr::codecov()'
