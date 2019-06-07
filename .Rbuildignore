@@ -4,3 +4,4 @@
 ^man-roxygen
 ^codecov\.yml$
 ^vignettes/brief-manual_cache/
+^.Rprofile$
