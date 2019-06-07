@@ -20,6 +20,10 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 set.seed(1)
+is_CRAN <- !identical(Sys.getenv("NOT_CRAN"), "true")
+if (!is_CRAN) {
+   options(mc.cores = parallel::detectCores())
+}
 ```
 
 # Overview
