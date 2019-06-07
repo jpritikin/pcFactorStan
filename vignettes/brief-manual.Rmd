@@ -55,12 +55,11 @@ to set the scale.
 
 ## Physical activity flow propensity
 
-The R code below first loads **rstan** and **pcFactorStan**. The next command that follows gives **rstan** permission to use all of the available CPU cores to run multiple chains in parallel.
+The R code below first loads **rstan** and **pcFactorStan**.
 
 ```{r, message=FALSE}
 library(rstan)
 library(pcFactorStan)
-options(mc.cores = parallel::detectCores())
 ```
 
 Next we take a peek at the data.
