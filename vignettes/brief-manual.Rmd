@@ -23,6 +23,8 @@ set.seed(1)
 is_CRAN <- !identical(Sys.getenv("NOT_CRAN"), "true")
 if (!is_CRAN) {
    options(mc.cores = parallel::detectCores())
+} else {
+   q()  # takes too long, pretend everything is fine
 }
 ```
 
@@ -455,3 +457,9 @@ learning algorithm that masters chess, shogi, and Go through
 self-play. Science, 362(6419), 1140-1144.
 
 Vehtari, A., Gelman, A., Simpson, D., Carpenter, B., & Bürkner, P. C. (2019). Rank-normalization, folding, and localization: An improved $\widehat R$ for assessing convergence of MCMC. arXiv preprint arXiv:1903.08008.
+
+# R Session Info
+
+```{r}
+sessionInfo()
+```

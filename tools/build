@@ -15,6 +15,7 @@ mkdir staging
 git archive --format=tar HEAD | (cd staging; tar -xf -)
 cd staging
 
+export NOT_CRAN=true
 export MAKEFLAGS=-j2
 
 echo "pkgbuild::compile_dll(); devtools::document(roclets = c('rd', 'collate', 'namespace'))" | R --vanilla
