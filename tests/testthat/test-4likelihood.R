@@ -12,6 +12,9 @@ test_that("unidim", {
   expect_error(pcStan('unidim', data=phyActFlowPropensity[,1:3]),
                "Data must be processed by prepData")
 
+  expect_error(pcStan('unidim', data=matrix(0, 3, 3)),
+               "Is data an object returned by prepData")
+
   dl <- prepData(phyActFlowPropensity[,c(1,2,3)])
 
   dl$varCorrection <- 2.0
@@ -84,11 +87,13 @@ test_that("mixed thresholds", {
 })
 
 test_that("calibrateItems", {
-  pafp <- phyActFlowPropensity[,1:5]
+  pafp <- phyActFlowPropensity[,c(1,2,6:8)]
   result <- calibrateItems(pafp, iter=1000L)
   expect_equal(nrow(result), 3)
-  expect_true(all(result[,'n_eff'] > 400))
-  expect_true(all(result[,'Rhat'] < 1.015))
-  expect_equal(result[,'scale'], c(.64, .61, .50),
+  expect_true(result[1:2,'n_eff'] > 400)
+  expect_true(result[1:2,'Rhat'] < 1.015)
+  expect_true(result[3,'divergent'] > 0)
+  expect_true(result[3,'n_eff'] < 400)
+  expect_equal(result[1:2,'scale'], c(.77, .82),
                tolerance=1e-2, scale=1)
 })

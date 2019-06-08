@@ -122,7 +122,7 @@ prepCleanData <- function(df) {
     item=item
   )
   if (any(is.na(match(preppedDataFields, names(dl))))) {
-    stop("Bug in prepCleanData(); contact developers")
+    stop("Bug in prepCleanData(); contact developers") # nocov
   }
   dl
 }
