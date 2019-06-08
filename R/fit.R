@@ -227,7 +227,7 @@ findModel <- function(model=NULL) {
 #' @examples
 #' dl <- prepData(phyActFlowPropensity[,c(1,2,3)])
 #' dl$varCorrection <- 2.0
-#' \dontrun{pcStan('unidim_adapt', data=dl)}
+#' \donttest{pcStan('unidim_adapt', data=dl)}  # takes more than 5 seconds
 #' @importFrom rstan sampling
 #' @export
 pcStan <- function(model, data, ...) {
@@ -268,8 +268,8 @@ pcStan <- function(model, data, ...) {
 #' @seealso \code{\link[rstan:check_hmc_diagnostics]{check_hmc_diagnostics}}
 #' @template ref-vehtari2019
 #' @examples
-#' \dontrun{
-#' result <- calibrateItems(phyActFlowPropensity)
+#' \donttest{
+#' result <- calibrateItems(phyActFlowPropensity)  # takes more than 5 seconds
 #' print(result)
 #' }
 #' @importMethodsFrom rstan summary
