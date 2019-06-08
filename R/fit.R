@@ -296,7 +296,7 @@ calibrateItems <- function(df, iter=2000L, chains=4L, varCorrection=3.0, maxAtte
       dl <- prepCleanData(df[,c(vCol, itemCol)])
       dl$varCorrection <- varCorrection
       result[rx,'iter'] <- ifelse(is.na(result[rx,'iter']), iter, result[rx,'iter'] * 1.5)
-      fit1 <- suppressWarnings(pcStan("unidim_adapt", data=dl, chains=chains, iter=result[rx,'iter']))
+      fit1 <- suppressWarnings(pcStan("unidim_adapt", data=dl, chains=chains, iter=result[rx,'iter'], ...))
       result[rx,'divergent'] <- get_num_divergent(fit1)
       result[rx,'treedepth'] <- sum(get_max_treedepth_iterations(fit1))
       result[rx,'low_bfmi'] <- length(get_low_bfmi_chains(fit1))
