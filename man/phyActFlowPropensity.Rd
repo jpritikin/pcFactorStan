@@ -14,12 +14,15 @@
     \item A2 is somewhat more predictable than A1.
     \item A2 is much more predictable than A1.
   }
-  Most items were adapted from Jackson & Eklund (2002). 
+  Most items were adapted from Jackson & Eklund (2002).
 }
 \format{A data.frame with one row per activity comparison and items in
   the columns. All item responses are between -2 and 2. Zero indicates
 that both activities were judged equal on the trait.}
-\source{A manuscript fully describing the study is in preparation.}
+\source{A manuscript fully describing the study is in preparation.
+Data are made available under the Community Data License Agreement -
+Sharing - Version 1.0, https://cdla.io/sharing-1-0/
+}
 \references{
 Jackson, S. A., & Eklund, R. C. (2002). Assessing flow in physical activity: The flow state
 scale-2 and dispositional flow scale-2. Journal of Sport and Exercise Psychology,
