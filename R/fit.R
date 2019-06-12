@@ -178,7 +178,7 @@ verifyIsPreppedData <- function(data) {
 #' then you can try the \sQuote{factor} model.
 #' For each model, there is a \sQuote{_ll} variation. This model
 #' includes row-wise log likelihoods suitable for feeding to \pkg{loo}
-#' for efficient approximate leave-one-out cross-validation.
+#' for efficient approximate leave-one-out cross-validation (Vehtari, Gelman, & Gabry, 2017).
 #'
 #' There is also a special model \sQuote{unidim_adapt}.  Except for
 #' this model, the other models require a scaling constant.  To find
@@ -189,6 +189,7 @@ verifyIsPreppedData <- function(data) {
 #' should provide optimal results.
 #'
 #' @return An instance of S4 class \code{\link[rstan:stanmodel-class]{stanmodel}} that can be passed to \code{\link{pcStan}}.
+#' @template ref-vehtari2017
 #' @examples
 #' findModel()  # shows available models
 #' findModel('unidim')
