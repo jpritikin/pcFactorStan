@@ -269,8 +269,7 @@ roundRobinGraph <- function(name, N) {
 #' to leaf vertices. These vertex connections are similar to the pairs
 #' that you might observe in an elimination tournament. The selected
 #' vertices are sorted so it doesn't matter whether \code{shape1 >
-#' shape2} or \code{shape1 < shape2} as long as \code{shape1 !=
-#' shape2}.
+#' shape2} or \code{shape1 < shape2}.
 #'
 #' @inheritParams roundRobinGraph
 #' @inherit roundRobinGraph return
