@@ -10,8 +10,8 @@ Authors@R:
 	   person(given = c("Daniel C."), family = "Furr", role="ctb", email = "danielcfurr@berkeley.edu"),
 	   person("Trustees of Columbia University", role="cph"))
 Description: Provides convenience functions and pre-programmed Stan models
-    related to the pairwise comparison factor model. Its purpose is to make fitting
-    pairwise comparison data using Stan easy.
+    related to the paired comparison factor model. Its purpose is to make fitting
+    paired comparison data using Stan easy.
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true

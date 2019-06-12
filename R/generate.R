@@ -43,7 +43,7 @@ assertNameUnused <- function(df, name) {
   }
 }
 
-#' Generate pairwise comparison data with a common factor that
+#' Generate paired comparison data with a common factor that
 #' accounts for some proportion of the variance
 #'
 #' @param prop the number of items or a vector of proportions of variance
@@ -104,7 +104,7 @@ generateFactorItems <- function(df, prop, th=0.5, scale=1, name) {
   generateItem(df, theta, th, scale)
 }
 
-#' Generate pairwise comparison data with random correlations between items
+#' Generate paired comparison data with random correlations between items
 #'
 #' @inheritParams generateItem
 #' @param numItems how many items to create
@@ -147,7 +147,7 @@ generateCovItems <- function(df, numItems, th=0.5, scale=1, name) {
   generateItem(df, theta, th, scale)
 }
 
-#' Generate pairwise comparison data for one or more items given
+#' Generate paired comparison data for one or more items given
 #' absolute latent scores
 #'
 #' @template args-df

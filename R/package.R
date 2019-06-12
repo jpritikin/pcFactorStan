@@ -5,7 +5,7 @@
 #' @aliases pcFactorStan
 #'
 #' @description
-#' \pkg{pcFactorStan} makes it easy to fit the pairwise comparison
+#' \pkg{pcFactorStan} makes it easy to fit the paired comparison
 #' factor model using \pkg{rstan}.
 #' 
 #' A user will generally want to use \code{\link{prepData}} and

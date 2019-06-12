@@ -30,7 +30,7 @@ knitr::opts_chunk$set(
 
 # Overview
 
-The **pcFactorStan** package for **R** provides convenience functions and pre-programmed **Stan** models related to analysis of pairwise comparison data. Its purpose is to make fitting models using Stan easy. **pcFactorStan** relies on the **rstan** package, which should be installed first.
+The **pcFactorStan** package for **R** provides convenience functions and pre-programmed **Stan** models related to analysis of paired comparison data. Its purpose is to make fitting models using Stan easy. **pcFactorStan** relies on the **rstan** package, which should be installed first.
 [See here](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started) for instructions on installing **rstan**.
 
 One situation where a factor model might be useful

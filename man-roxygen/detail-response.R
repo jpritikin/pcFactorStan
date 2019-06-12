@@ -1,6 +1,6 @@
 #' @details
 #' 
-#' The pairwise comparison item response model has thresholds and a
+#' The paired comparison item response model has thresholds and a
 #' scale parameter similar to the partial credit model (Masters,
 #' 1982). The model is cumbersome to describe in traditional
 #' mathematical notation, but the R code is fairly straightforward,
@@ -35,5 +35,5 @@
 #' customary in item response models. However, it is not difficult to
 #' show that discrimination is a function of thresholds and
 #' scale. That is, discrimination is not an independent parameter and
-#' cannot be estimated. In pairwise comparison models, discrimination
+#' cannot be estimated. In paired comparison models, discrimination
 #' and measurement error are confounded.

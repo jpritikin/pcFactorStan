@@ -209,7 +209,7 @@ findModel <- function(model=NULL) {
   obj
 }
 
-#' Fit a pairwise comparison Stan model
+#' Fit a paired comparison Stan model
 #' @template args-locate
 #' @param data a data list prepared for processing by Stan
 #' @template args-stan

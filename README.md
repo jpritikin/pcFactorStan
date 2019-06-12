@@ -12,4 +12,4 @@ Title:       pcFactorStan
 [![Total Downloads](http://cranlogs.r-pkg.org/badges/grand-total/pcFactorStan)](http://cranlogs.r-pkg.org/badges/grand-total/pcFactorStan)
 <!-- badges: end -->
 
-pcFactorStan makes it easy to fit the pairwise comparison factor model using rstan.
+pcFactorStan makes it easy to fit the paired comparison factor model using rstan.
