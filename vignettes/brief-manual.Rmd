@@ -77,7 +77,7 @@ head(phyActFlowPropensity)
 kable(head(phyActFlowPropensity))
 ```
 
-These data consist of paired comparisons of 87 physical activities on 16 flow-related facets. The procedure was that participants submitted two activities using free-form input. These activities were substitute into item templates. For example, the 'predict' item asked, "How predictable is the action?" with response options:
+These data consist of paired comparisons of 87 physical activities on 16 flow-related facets. The procedure was that participants submitted two activities using free-form input. These activities were substituted into item templates. For example, the 'predict' item asked, "How predictable is the action?" with response options:
 
 * A1 is much more predictable than A2.
 * A1 is somewhat more predictable than A2.
