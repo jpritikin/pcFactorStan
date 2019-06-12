@@ -11,7 +11,7 @@
 #' cmp_probs <- function(scale, pa1, pa2, thRaw) {
 #'   th <- cumsum(thRaw)
 #'   diff <- scale * (pa2 - pa1)
-#'   unsummed <- c(0, c(diff + rev(th)), c(diff - th), use.names = FALSE)
+#'   unsummed <- c(0, diff + rev(th), diff - th, use.names = FALSE)
 #'   softmax(cumsum(unsummed))
 #' }
 #' }
