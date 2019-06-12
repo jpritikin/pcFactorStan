@@ -280,7 +280,6 @@ calibrateItems <- function(df, iter=2000L, chains=4L, varCorrection=3.0, maxAtte
   df <- filterGraph(df)
   df <- normalizeData(df)
   vCol <- match(paste0('pa',1:2), colnames(df))
-  chains <- 4L
   varCorrection <- 3.0
   result <- expand.grid(item=colnames(df[,-vCol]),
                         iter=NA,
