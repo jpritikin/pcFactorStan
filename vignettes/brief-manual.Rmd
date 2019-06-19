@@ -241,7 +241,7 @@ library(qgraph)
 qgraph(tcor, layout = "spring", graph = "cor", labels=colnames(tcor),
        legend.cex = 0.3,
        cut = 0.3, maximum = 1, minimum = 0, esize = 20,
-       vsize = 7, repulsion = 0.8)
+       vsize = 7, repulsion = 0.8, negDashed=TRUE, theme="colorblind")
 ```
 
 Based on this plot and theoretical considerations,
