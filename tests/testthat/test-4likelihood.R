@@ -19,12 +19,12 @@ test_that("unidim", {
 
   dl$varCorrection <- 2.0
   m1 <- findModel("unidim_adapt")
-  f1 <- sampling(m1, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
+  f1 <- sampling(m1, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
   expect_equal(get_logposterior(f1)[[1]], -53935.71, tolerance=1e-2, scale=1)
 
   dl$scale <- 1.0
   m2 <- findModel("unidim_ll")
-  f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
+  f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
   expect_equal(get_logposterior(f2)[[1]], -3174.317, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
@@ -35,7 +35,7 @@ test_that("covariance", {
   dl <- prepData(phyActFlowPropensity)
   dl$scale <- 1.5
   m2 <- findModel("covariance_ll")
-  f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
+  f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
   expect_equal(get_logposterior(f2)[[1]], -89848.91, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
@@ -46,7 +46,7 @@ test_that("factor", {
   dl <- prepData(phyActFlowPropensity)
   dl$scale <- 1.5
   m2 <- findModel("factor_ll")
-  f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
+  f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
   expect_equal(get_logposterior(f2)[[1]], -100692.33, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
@@ -70,7 +70,7 @@ test_that("mixed thresholds", {
   dl <- prepCleanData(df)
   dl$scale <- 1.5
   m2 <- findModel("covariance_ll")
-  f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
+  f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
   expect_equal(get_logposterior(f2)[[1]], -5633.51, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
@@ -79,7 +79,7 @@ test_that("mixed thresholds", {
   df <- normalizeData(df, .palist=sample(palist, 10))
   dl <- prepCleanData(df)
   dl$scale <- 1.5
-  f3 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0)
+  f3 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
   expect_equal(get_logposterior(f3)[[1]],
                get_logposterior(f2)[[1]], tolerance=1e-2, scale=1)
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
