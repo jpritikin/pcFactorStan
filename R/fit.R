@@ -75,6 +75,7 @@ prepCleanData <- function(df) {
 
   dataCols <- -match(paste0('pa',1:2), colnames(df))
   nthr <- apply(df[,dataCols,drop=FALSE], 2, function(x) max(abs(x), na.rm=TRUE))
+  itemNames <- names(nthr)
   names(nthr) <- NULL
 
   tall <- melt(df, id.vars = paste0('pa',1:2),
@@ -104,6 +105,7 @@ prepCleanData <- function(df) {
   }
 
   dl <- list(
+    nameInfo=list(pa=palist, item=itemNames),
     # all models
     NPA=length(palist),
     NCMP=length(pick),
@@ -154,7 +156,8 @@ prepData <- function(df) {
   prepCleanData(df)
 }
 
-preppedDataFields <- c('NPA','NCMP','N','pa1','pa1','weight','pick','refresh')
+preppedDataFields <- c('nameInfo','NPA','NCMP','N','pa1','pa1','weight',
+                       'pick','refresh')
 
 verifyIsPreppedData <- function(data) {
   if (is.data.frame(data)) stop("Data must be processed by prepData. Try prepData(data)")
