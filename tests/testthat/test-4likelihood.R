@@ -63,7 +63,7 @@ test_that("mixed thresholds", {
   theta <- rmvnorm(length(palist), sigma=trueCor)
   dimnames(theta) <- list(palist, paste0('i', 1:numItems))
   for (ix in 1:numItems) {
-    df <- generateItem(df, theta[,ix], th=rep(-0.5, ix))
+    df <- generateItem(df, theta[,ix], th=rep(0.5, ix))#
   }
 
   df <- filterGraph(df)
@@ -71,10 +71,10 @@ test_that("mixed thresholds", {
   dl$scale <- 1.5
   m2 <- findModel("covariance_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
-  expect_equal(get_logposterior(f2)[[1]], -5633.51, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -7177.60, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
-               c(-41.785, -4.048, -1.776, -0.457, 0), tolerance=1e-2, scale=1)
+               c(-40.226, -6.891, -3.247, -1.446, 0), tolerance=1e-2, scale=1)
 
   df <- normalizeData(df, .palist=sample(palist, 10))
   dl <- prepCleanData(df)
