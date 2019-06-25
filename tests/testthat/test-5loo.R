@@ -4,7 +4,7 @@ context("test-5loo")
 skip_on_cran()
 options(mc.cores=4)
 
-RNGversion("3.6")
+suppressWarnings(RNGversion("3.6"))
 library(rstan)  # for get_logposterior
 library(mvtnorm)  # rmvnorm
 

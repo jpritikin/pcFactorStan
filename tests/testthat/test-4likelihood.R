@@ -3,7 +3,7 @@ context("test-4likelihood")
 skip_on_cran()
 options(mc.cores=4)
 
-RNGversion("3.5")
+suppressWarnings(RNGversion("3.5"))
 library(rstan)  # for get_logposterior
 
 test_that("unidim", {

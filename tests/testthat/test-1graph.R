@@ -1,6 +1,6 @@
 context("test-1graph")
 
-RNGversion("3.5")
+suppressWarnings(RNGversion("3.5"))
 
 test_that("roundRobinGraph", {
   df <- roundRobinGraph(letters[1:5], 15)

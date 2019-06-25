@@ -1,6 +1,6 @@
 context("test-3data")
 
-RNGversion("3.5")
+suppressWarnings(RNGversion("3.5"))
 
 test_that("normalizeData", {
   df <- data.frame(pa1=NA, pa2=NA, i1=c(1, -1), i2=c(-2, 2))

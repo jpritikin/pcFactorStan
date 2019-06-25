@@ -1,6 +1,6 @@
 context("test-2generate")
 
-RNGversion("3.5")
+suppressWarnings(RNGversion("3.5"))
 
 test_that("generateItem", {
   set.seed(1)
