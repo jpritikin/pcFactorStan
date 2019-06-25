@@ -192,6 +192,7 @@ verifyIsPreppedData <- function(data) {
 #' should provide optimal results.
 #'
 #' @return An instance of S4 class \code{\link[rstan:stanmodel-class]{stanmodel}} that can be passed to \code{\link{pcStan}}.
+#' @seealso \code{\link{toLoo}}
 #' @template ref-vehtari2017
 #' @examples
 #' findModel()  # shows available models
@@ -215,7 +216,7 @@ findModel <- function(model=NULL) {
 
 #' Fit a paired comparison Stan model
 #' @template args-locate
-#' @param data a data list prepared for processing by Stan
+#' @template args-data
 #' @template args-stan
 #' @description Uses \code{\link{findModel}} to find the appropriate
 #'   model and then invokes \link[rstan:sampling]{sampling}.
@@ -227,7 +228,7 @@ findModel <- function(model=NULL) {
 #'   summarizing parameter posteriors.
 #'
 #' @return An object of S4 class \code{\link[rstan:stanfit-class]{stanfit}}.
-#' @seealso \code{\link{calibrateItems}}
+#' @seealso \code{\link{calibrateItems}}, \code{\link{outlierTable}}
 #' @examples
 #' dl <- prepData(phyActFlowPropensity[,c(1,2,3)])
 #' dl$varCorrection <- 2.0
@@ -311,4 +312,103 @@ calibrateItems <- function(df, iter=2000L, chains=4L, varCorrection=3.0, maxAtte
     }
   }
   result
+}
+
+#' Compute approximate leave-one-out (LOO) cross-validation for Bayesian
+#' models using Pareto smoothed importance sampling (PSIS)
+#'
+#' @param fit a \code{\link[rstan:stanfit-class]{stanfit}} object
+#' @param ... Additional options passed to \code{\link[loo:loo]{loo}}.
+#'
+#' @description
+#'
+#' You must use an \sQuote{_ll} model variation (see \code{\link{findModel}}).
+#'
+#' @return a loo object
+#' @seealso \code{\link{outlierTable}}, \code{\link[loo:loo]{loo}}
+#' @importFrom loo loo extract_log_lik relative_eff
+#' @export
+#' @examples
+#' palist <- letters[1:10]
+#' df <- twoLevelGraph(palist, 300)
+#' theta <- rnorm(length(palist))
+#' names(theta) <- palist
+#' df <- generateItem(df, theta, th=rep(0.5, 4))
+#' 
+#' df <- filterGraph(df)
+#' df <- normalizeData(df)
+#' dl <- prepCleanData(df)
+#' dl$scale <- 1.5
+#'
+#' \donttest{
+#' m1 <- pcStan("unidim_ll", dl)
+#' 
+#' loo1 <- toLoo(m1, cores=1)
+#' print(loo1)
+#' }
+toLoo <- function(fit, ...) {
+  ll <- extract_log_lik(fit, merge_chains = FALSE)
+  loo(ll, r_eff=relative_eff(exp(ll)), ...)
+}
+
+#' List observations with Pareto values larger than a given threshold
+#' 
+#' @template args-data
+#' @param x An object created by \code{\link[loo:loo]{loo}}
+#' @param threshold threshold is the minimum k value to include
+#' 
+#' @description
+#'
+#' The function \code{\link{prepCleanData}} compresses observations
+#' into the most efficient format for evaluation by Stan. This function
+#' maps indices of observations back to the actual observations,
+#' filtering by the largest Pareto k values. It is assumed that
+#' \code{data} was processed by \code{\link{normalizeData}} or is in
+#' the same order as seen by \code{\link{prepCleanData}}.
+#' 
+#' @return
+#' A data.frame (one row per observation) with the following columns:
+#' \describe{
+#' \item{pa1}{Name of object 1}
+#' \item{pa2}{Name of object 2}
+#' \item{item}{Name of item}
+#' \item{pick}{Observed response}
+#' \item{k}{Associated Pareto k value}
+#' }
+#' @seealso \code{\link{toLoo}}, \code{\link[loo:pareto-k-diagnostic]{pareto_k_ids}}
+#' @importFrom loo pareto_k_ids pareto_k_values
+#' @export
+#' @examples
+#' palist <- letters[1:10]
+#' df <- twoLevelGraph(palist, 300)
+#' theta <- rnorm(length(palist))
+#' names(theta) <- palist
+#' df <- generateItem(df, theta, th=rep(0.5, 4))
+#' 
+#' df <- filterGraph(df)
+#' df <- normalizeData(df)
+#' dl <- prepCleanData(df)
+#' dl$scale <- 1.5
+#'
+#' \donttest{
+#' m1 <- pcStan("unidim_ll", dl)
+#' 
+#' loo1 <- toLoo(m1, cores=1)
+#' ot <- outlierTable(dl, loo1, threshold=.2)
+#' df[df$pa1==ot[1,'pa1'] & df$pa2==ot[1,'pa2'], 'i1']
+#' }
+outlierTable <- function(data, x, threshold=0.5) {
+  verifyIsPreppedData(data)
+  ids <- pareto_k_ids(x, threshold)
+  loc <- c(1L, 1L+cumsum(data$weight))
+  offset <- findInterval(ids, loc)
+  palist <- data$nameInfo$pa
+  itemName <- data$nameInfo$item
+  df <- data.frame(pa1=palist[data$pa1[offset]],
+             pa2=palist[data$pa2[offset]],
+             item=itemName[data$item[offset]],
+             pick=data$pick[offset],
+             k=pareto_k_values(x)[ids],
+             stringsAsFactors=FALSE, check.names=FALSE)
+  df[order(-df$k),]
 }

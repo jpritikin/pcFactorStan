@@ -14,4 +14,6 @@
 /man/prepData.Rd
 /man/findModel.Rd
 /man/calibrateItems.Rd
+/man/outlierTable.Rd
+/man/toLoo.Rd
 inst/doc
