@@ -63,10 +63,11 @@ test_that("loo", {
   loo1 <- toLoo(m1, cores=1)
   ot <- outlierTable(dl, loo1, threshold=.3)
   bad <- df[df$pa1==ot[1,'pa1'] & df$pa2==ot[1,'pa2'],]
-  expect_true(all(sign(bad[as.numeric(rownames(bad)) <= 300, ot[1,'item']])
-                  == sign(bad[1, ot[1,'item']])))
-  expect_true(all(sign(bad[as.numeric(rownames(bad)) > 300, ot[1,'item']])
-                  == sign(bad[nrow(bad), ot[1,'item']])))
-  expect_true(sign(bad[1, ot[1,'item']]) !=
-                sign(bad[nrow(bad), ot[1,'item']]))
+  item <- as.character(ot[1,'item'])
+  expect_true(all(sign(bad[as.numeric(rownames(bad)) <= 300, item])
+                  == sign(bad[1, item])))
+  expect_true(all(sign(bad[as.numeric(rownames(bad)) > 300, item])
+                  == sign(bad[nrow(bad), item])))
+  expect_true(sign(bad[1, item]) !=
+                sign(bad[nrow(bad), item]))
 })
