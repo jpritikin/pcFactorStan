@@ -26,9 +26,6 @@ test_that("loo univariate", {
   loo1 <- toLoo(m1, cores=1)
   expect_error(outlierTable(df, loo1),
                "Data must be processed by prepData")
-  ot <- outlierTable(dl, loo1, threshold=.25)
-  pick <- sort(df[df$pa1==ot[1,'pa1'] & df$pa2==ot[1,'pa2'], 'i1'])
-  expect_equal(pick, c(-3,0,0))
 })
 
 test_that("loo", {
