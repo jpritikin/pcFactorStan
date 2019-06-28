@@ -124,7 +124,7 @@ generateFactorItems <- function(df, prop, th=0.5, scale=1, name) {
 #'
 #' # generateCovItems essentially does the same thing as:
 #' numItems <- 3
-#' palist <- unique(c(df$pa1,df$pa2))
+#' palist <- letters[1:10]
 #' trueCor <- cov2cor(rWishart(1, numItems, diag(numItems))[,,1])
 #' theta <- rmvnorm(length(palist), sigma=trueCor)
 #' dimnames(theta) <- list(palist, paste0('i', 3 + 1:numItems))
