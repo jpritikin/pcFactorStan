@@ -59,7 +59,7 @@ test_that("generateFactorItems", {
   # Just ensure that nothing has changed.
   c1 <- cov(df[,paste0('i',1:3)])
   expect_equal(c1[lower.tri(c1, diag = TRUE)],
-               c(0.674, -0.14, -0.107, 0.672, 0.229, 0.559),
+               c(0.657, -0.138, -0.109, 0.572, 0.263, 0.627),
                tolerance=1e-3, scale=1)
 
   expect_error(generateFactorItems(df, 1),

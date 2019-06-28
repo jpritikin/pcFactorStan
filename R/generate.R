@@ -230,6 +230,13 @@ generateItem <- function(df, theta, th=0.5, scale=1, name) {
   df
 }
 
+objectNamesToFactor <- function(name, df) {
+  for (v in 1:2) {
+    df[[ paste0('pa',v) ]] <- factor(df[[ paste0('pa',v) ]], name)
+  }
+  df
+}
+
 #' Create an edge list with round-robin connectivity
 #'
 #' @param name vector of vertex names
@@ -252,6 +259,7 @@ roundRobinGraph <- function(name, N) {
     df[rx,'pa1'] <- name[pick[1]]
     df[rx,'pa2'] <- name[pick[2]]
   }
+  df <- objectNamesToFactor(name, df)
   df
 }
 
@@ -305,6 +313,7 @@ twoLevelGraph <- function(name, N, shape1=0.8, shape2=0.5) {
     df[rx,'pa1'] <- name[pick[1]]
     df[rx,'pa2'] <- name[pick[2]]
   }
+  df <- objectNamesToFactor(name, df)
   df
 }
 

@@ -4,6 +4,7 @@ suppressWarnings(RNGversion("3.5"))
 
 test_that("roundRobinGraph", {
   df <- roundRobinGraph(letters[1:5], 15)
+  expect_identical(levels(df$pa1), letters[1:5])
   expect_identical(paste0(df$pa1, collapse = ''),
                    "aababcabcdaabab")
   expect_identical(paste0(df$pa2, collapse = ''),
@@ -18,6 +19,7 @@ test_that("roundRobinGraph", {
 test_that("twoLevelGraph", {
   set.seed(1)
   df <- twoLevelGraph(letters[1:8], 20, .8, .5)
+  expect_identical(levels(df$pa1), letters[1:8])
   expect_identical(paste0(df$pa1, collapse = ''),
                    "aaaaaaabaabaacaabbea")
   expect_identical(paste0(df$pa2, collapse = ''),
