@@ -7,5 +7,6 @@ fi
 
 # Not sure why RStudio keeps changing the hashes in the knitr cache
 
+export NOT_CRAN=true
 cd vignettes
 echo "library(rmarkdown); render('brief-manual.Rmd', html_document())" | R --vanilla

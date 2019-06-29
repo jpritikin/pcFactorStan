@@ -17,6 +17,7 @@ is_CRAN <- !identical(Sys.getenv("NOT_CRAN"), "true")
 if (!is_CRAN) {
    options(mc.cores = parallel::detectCores())
 } else {
+   print("CRAN detected")
    q()  # takes too long, pretend everything is fine
 }
 library(knitr)
