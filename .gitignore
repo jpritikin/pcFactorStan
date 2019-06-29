@@ -16,4 +16,5 @@
 /man/calibrateItems.Rd
 /man/outlierTable.Rd
 /man/toLoo.Rd
+/man/unfactor.Rd
 inst/doc

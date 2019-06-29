@@ -4,7 +4,12 @@ suppressWarnings(RNGversion("3.5"))
 
 test_that("roundRobinGraph", {
   df <- roundRobinGraph(letters[1:5], 15)
+  expect_true(is.factor(df$pa1))
   expect_identical(levels(df$pa1), letters[1:5])
+  f <- unfactor(df$pa1)
+  expect_false(is.factor(f))
+  expect_true(is.null(levels(f)))
+  expect_equal(f, unfactor(f))
   expect_identical(paste0(df$pa1, collapse = ''),
                    "aababcabcdaabab")
   expect_identical(paste0(df$pa2, collapse = ''),

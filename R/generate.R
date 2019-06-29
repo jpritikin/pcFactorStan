@@ -400,3 +400,25 @@ print.filteredGraph <- function(x, ...) {
     }
   }
 }
+
+#' Turn a factor back into a vector of integers
+#'
+#' @param f a factor
+#'
+#' @description
+#'
+#' Factors store values as integers and use a 'levels' attribute to
+#' map the integers to labels. This function removes the 'factor'
+#' class and levels attribute, leaving the vector of integers.
+#'
+#' @examples
+#' f <- factor(letters[1:3])
+#' print(f)
+#' print(unfactor(f))
+#' @export
+unfactor <- function(f) {
+  if (!is.factor(f)) return(f)
+  f <- unclass(f)
+  levels(f) <- c()
+  f
+}
