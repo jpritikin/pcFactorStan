@@ -67,4 +67,16 @@ test_that("loo", {
                   == sign(bad[nrow(bad), item]), na.rm=TRUE))
   expect_true(sign(bad[1, item]) !=
                 sign(bad[nrow(bad), item]))
+
+  m2 <- pcStan("factor_ll", dl, chains=4L, iter=1000L)
+  loo2 <- toLoo(m2, cores=1)
+  ot <- outlierTable(dl, loo2)
+  bad <- df[df$pa1==ot[1,'pa1'] & df$pa2==ot[1,'pa2'],]
+  item <- as.character(ot[1,'item'])
+  expect_true(all(sign(bad[as.numeric(rownames(bad)) <= 300, item])
+                  == sign(bad[1, item])))
+  expect_true(all(sign(bad[as.numeric(rownames(bad)) > 300, item])
+                  == sign(bad[nrow(bad), item]), na.rm=TRUE))
+  expect_true(sign(bad[1, item]) !=
+                sign(bad[nrow(bad), item]))
 })
