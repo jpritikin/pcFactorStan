@@ -156,6 +156,9 @@ deviation close to 1.0,
 s50 <- summary(fit1, pars=c("scale"), probs=c(.5))$summary[,'50%']
 print(s50)
 ```
+```{r, results='hide'}
+rm(fit1)  # free up some memory
+```
 
 We use the median instead of the mean because `scale` is not likely to have a symmetric marginal posterior distribution.
 We obtained `r round(s50,2)`, but that value is just for one item.
@@ -244,6 +247,9 @@ qgraph(tcor, layout = "spring", graph = "cor", labels=colnames(tcor),
        cut = 0.3, maximum = 1, minimum = 0, esize = 20,
        vsize = 7, repulsion = 0.8, negDashed=TRUE, theme="colorblind")
 ```
+```{r, results='hide'}
+rm(fit2)  # free up some memory
+```
 
 Based on this plot and theoretical considerations,
 I decided to exclude _spont_, _control_, _evaluated_, and _waiting_
@@ -252,23 +258,41 @@ A detailed rationale for why these items are excluded and not others
 will be presented in a forthcoming article.
 For now, let us focus on the mechanics of the next step in
 our analyses.
+I fit model 'factor_ll' instead of 'factor' so I can use the
+**loo** package to look for outliers.
+We also need to take care that the data `pafp` matches
+the data fit by the model so we can map back from the model
+back to the data. Hence, we use `prepCleanData` and
+update `pafp` using the usual the data cleaning sequence
+of `filterGraph` and `normalizeData`.
 
-```{r}
+```{r factorData, cache=TRUE}
 itemNames <- setdiff(itemNames, c('spont','control','evaluated','waiting'))
 pafp <- pafp[,c(paste0('pa',1:2), itemNames)]
-dl <- prepData(pafp)
+pafp <- normalizeData(filterGraph(pafp))
+dl <- prepCleanData(pafp)
 dl$scale <- median(result[-excl,'scale'])  # close enough
 ```
 
 ```{r factor, message=FALSE, results='hide', cache=TRUE}
-fit3 <- pcStan("factor", data=dl, include=FALSE,
+fit3 <- pcStan("factor_ll", data=dl, include=FALSE,
                pars=c('rawUnique', 'rawUniqueTheta', 'rawFactor', 'rawLoadings'))
 ```
+
+To check the fit diagnostics, we have to take care only to
+examine the parameters of interest. In particular, we do not
+care about `log_lik` because these are the per-observation
+likelihoods for **loo**.
+We also ignore `theta` because it is a function
+of the other parameters.
 
 ```{r}
 check_hmc_diagnostics(fit3)
 
-allPars <- summary(fit3, probs=0.5)$summary
+interest <- c("threshold", "factorLoadings",  "factorProp", "factor",
+ "unique", "uniqueTheta", "lp__")
+
+allPars <- summary(fit3, pars=interest, probs=0.5)$summary
 print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
@@ -276,19 +300,62 @@ print(max(allPars[,'Rhat']))
 The maximum $\widehat R$ is too high. We need to try again with more iterations,
 
 ```{r factor2, message=FALSE, results='hide', cache=TRUE}
-fit3 <- pcStan("factor", data=dl, include=FALSE, iter=4000L,
+fit3 <- pcStan("factor_ll", data=dl, include=FALSE, iter=4000L,
                pars=c('rawUnique', 'rawUniqueTheta', 'rawFactor', 'rawLoadings'))
 ```
 
 ```{r}
 check_hmc_diagnostics(fit3)
 
-allPars <- summary(fit3, probs=0.5)$summary
+allPars <- summary(fit3, pars=interest, probs=0.5)$summary
 print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
 
-Looks good! Let us plot the marginal posterior distributions of the factor proportions,
+Looks good! Let us see which data are the most unexpected by the model.
+We create a `loo` object and pass that to `outlierTable`.
+There are no observations above the customary threshold of 0.5,
+so we pick a lower threshold for the purpose of demonstration.
+
+```{r factorLoo, cache=TRUE}
+options(mc.cores=1)  # otherwise loo consumes too much RAM
+l1 <- toLoo(fit3)
+ot <- outlierTable(dl, l1, 0.45)
+```
+```{r, results='hide'}
+print(ot)
+```
+```{r, results='asis', echo=FALSE}
+kable(ot)
+```
+
+We can investigate further.
+Why is it unexpected that pilates requires much more skill than climbing?
+We can examine how other participants have responded to this item,
+
+```{r}
+pafp[pafp$pa1 == ot[1,'pa1'] & pafp$pa2 == ot[1,'pa2'],
+     c('pa1','pa2','skill')]
+```
+
+Hm, only one participant compared climbing and pilates.
+Maybe this subject had not seen the Alex Honnold documentary Free Solo (2018)?
+Let us look a little deeper to understand why this response
+was unexpected.
+
+```{r}
+loc <- sapply(ot[1,c('pa1','pa2','item')], unfactor)
+summary(fit3, pars=paste0("theta[",loc[paste0('pa',1:2)],
+                          ",", loc['item'],"]"))$summary
+```
+
+Here we find that, based on comparisons with other activities,
+climbing was estimated to require about 1.5 units of skill
+more than pilates.
+We could continue our investigation by looking at which
+responses justify these skill estimates.
+However, let us move on and
+plot the marginal posterior distributions of the factor proportions,
 
 ```{r factorProp, cache=TRUE}
 library(reshape2)
