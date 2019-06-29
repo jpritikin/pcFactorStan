@@ -415,5 +415,7 @@ outlierTable <- function(data, x, threshold=0.5) {
   }
   levels(df[['item']]) <- itemName
   class(df[['item']]) <- 'factor'
-  df[order(-df$k),]
+  df <- df[order(-df$k),]
+  rownames(df) <- c()  # original order is meaningless
+  df
 }
