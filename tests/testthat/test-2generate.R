@@ -1,3 +1,5 @@
+library(testthat)
+library(pcFactorStan)
 context("test-2generate")
 
 suppressWarnings(RNGversion("3.5"))
@@ -22,8 +24,10 @@ test_that("generateItem", {
 
   expect_error(generateItem('i1'), "df is not a data.frame")
 
-  theta <- matrix(rnorm(10), nrow=5,
-                  dimnames=list(letters[1:5], c('i2','i3')))
+  theta <- matrix(rnorm(10), nrow=5)
+  expect_error(generateItem(df, theta),
+               "No latent score")
+  dimnames(theta) <- list(letters[1:5], c('i2','i3'))
   expect_error(generateItem(df, theta, name=c('apple', 'banana')),
                "Mismatch between name and colnames(theta)", fixed=TRUE)
   colnames(theta) <- NULL
