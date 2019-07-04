@@ -80,6 +80,7 @@ generated quantities {
   vector[N] log_lik;
   int cur = 1;
 
+  vector[NITEMS] sigma;
   vector[NITEMS] factorLoadings = rawLoadings;
   vector[NITEMS] factorProp;
   vector[NPA] factor = rawFactor;
@@ -87,6 +88,7 @@ generated quantities {
   matrix[NPA,NITEMS] uniqueTheta = rawUniqueTheta;
 
   for (fx in 1:NITEMS) {
+    sigma[fx] = sd(theta[,fx]);
     if (unique[fx] < 0) {
       unique[fx] = -unique[fx];
       uniqueTheta[,fx] = -uniqueTheta[,fx];

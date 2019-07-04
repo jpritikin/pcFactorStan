@@ -1,7 +1,7 @@
 #' Normalize data according to a canonical order
 #'
 #' @template args-df
-#' @param ...  Not used.  Forces remaining arguments to be specified by name.
+#' @template args-dots-barrier
 #' @param .palist a character vector giving an order to use instead of the default
 #' @param .sortRows logical. Using the same order, sort rows in addition to vertex pairs.
 #'

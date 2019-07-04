@@ -488,13 +488,13 @@ that is used to calibrate the `scale`. For multivariate models,
 |-----------|----------------|--------------------------------------|
 | threshold | normal(0,2)    | item response thresholds             |
 | thetaCor  | lkj(2)         | correlations between items           |
-| sigma     | lognormal(1,1) | relative item standard deviations    |
+| sigma     | lognormal(1,1) | relative item scale                  |
 | theta     | _see below_    | latent score                |
 
 Thresholds for all
 items are combined into a single vector.
 The prior for `theta` is multivariate normal with correlations
-`thetaCor` and standard deviations `sigma`.
+`thetaCor` and scale `sigma`.
 Exclude `rawTheta` and `rawThetaCorChol` from sampling.
 
 ## Factor
@@ -502,11 +502,12 @@ Exclude `rawTheta` and `rawThetaCorChol` from sampling.
 | parameter      | prior               | purpose                              |
 |----------------|---------------------|--------------------------------------|
 | threshold      | normal(0,2)         | item response thresholds             |
-| unique         | normal(1,1) T[0,]   | standard deviation of unique scores  |
+| unique         | normal(1,1) T[0,]   | scale of unique scores               |
 | uniqueTheta    | normal(0,1)         | unique scores                        |
-| factorLoadings | normal(0,1)         | signed standard deviation of factor scores  |
+| factorLoadings | normal(0,1)         | signed scale of factor scores        |
 | factor         | normal(0,1)         | factor scores                        |
 | factorProp     | N/A                 | signed factor variance proportion    |
+| sigma          | N/A                 | relative item scale                  |
 
 Thresholds for all items are combined into a single vector.
 `factorProp` is computed using Equation 3 of Gelman et al. (in press)

@@ -47,6 +47,8 @@ assertNameUnused <- function(df, name) {
 #' accounts for some proportion of the variance
 #'
 #' @param prop the number of items or a vector of proportions of variance
+#' @param sigma relative scale for each item
+#' @template args-dots-barrier
 #' @inheritParams generateItem
 #' @description
 #'
@@ -67,7 +69,7 @@ assertNameUnused <- function(df, name) {
 #' df <- generateFactorItems(df, 3)
 #' @export
 #' @importFrom stats rnorm sd rbinom rbeta
-generateFactorItems <- function(df, prop, th=0.5, scale=1, name) {
+generateFactorItems <- function(df, prop, th=0.5, scale=1, name, ..., sigma=1) {
   palist <- verifyIsData(df)
   if (length(prop) == 1) {
     if (prop < 3) stop(paste0("At least 3 indicators are required (", prop," requested)"))
@@ -99,7 +101,10 @@ generateFactorItems <- function(df, prop, th=0.5, scale=1, name) {
     if (rbinom(1, 1, .5)) thetaF[,cx] <- -thetaF[,cx]
   }
   theta <- thetaF + thetaN
-  theta <- scale(theta)
+  svec <- matrix(sigma, length(prop), 1)
+  theta <- t(t(theta) * c(svec) / apply(theta, 2, sd))
+  # print(sigma)
+  # print(apply(theta, 2, sd))
   dimnames(theta) <- list(palist, name)
   generateItem(df, theta, th, scale)
 }
