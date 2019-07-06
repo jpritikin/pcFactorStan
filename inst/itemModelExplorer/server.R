@@ -36,13 +36,18 @@ calcProb <- function(par, theta) {
 }
 
 shinyServer(function(input, output, session) {
-  state <- reactiveValues(
-    par = c(discrimination=2, scale=1, th1=.8, th2=1.6))
+  default <- itemModelExplorer.default
+
+  initialValues <- c(discrimination=1, scale=default$scaleValue)
+  for (tx in 1:length(default$thresholds)) {
+    initialValues[[paste0('th',tx)]] <- default$thresholds[tx]
+  }
+  state <- reactiveValues(par = initialValues)
 
   observe({
     numThr <- input$numThresholds
-    if (numThr + 2 == length(par)) return()
     oldPar <- isolate(state$par)
+    if (numThr + 2 == length(oldPar)) return()
     par <- oldPar[1:3]
     if (numThr > 1) par <- c(par, rep(2*par[3], numThr-1))
     names(par)[3:length(par)] <- paste0('th',1:numThr)
@@ -88,4 +93,3 @@ shinyServer(function(input, output, session) {
 })
 
 # runApp('.',display.mode="showcase")
-

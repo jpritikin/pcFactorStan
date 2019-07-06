@@ -17,4 +17,7 @@
 /man/outlierTable.Rd
 /man/toLoo.Rd
 /man/unfactor.Rd
+/man/parDistributionCustom.Rd
+/man/parInterval.Rd
+/man/responseCurve.Rd
 inst/doc

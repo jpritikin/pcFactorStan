@@ -1,6 +1,6 @@
 #include /pre/license.stan
 functions {
-#include /functions/cmp_prob.stan
+#include /functions/cmp_prob1.stan
 }
 data {
   // dimensions
@@ -30,8 +30,7 @@ parameters {
 }
 transformed parameters {
   vector[NTHRESH] cumTh = cumulative_sum(threshold);
-  real scale = (sigma * sigma) ^ varCorrection;
-
+  real scale = variance(theta) ^ varCorrection;
 }
 model {
   vector[NTHRESH*2 + 1] prob;

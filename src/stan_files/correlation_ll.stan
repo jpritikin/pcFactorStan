@@ -1,6 +1,6 @@
 #include /pre/license.stan
 functions {
-#include /functions/cmp_prob.stan
+#include /functions/cmp_prob2.stan
 }
 data {
   // dimensions
@@ -10,7 +10,7 @@ data {
   int<lower=1> NITEMS;
   int<lower=1> NTHRESH[NITEMS];         // number of thresholds
   int<lower=1> TOFFSET[NITEMS];
-  real scale;
+  vector[NITEMS] scale;
   // response data
   int<lower=1, upper=NPA> pa1[NCMP];        // PA1 for observation N
   int<lower=1, upper=NPA> pa2[NCMP];        // PA2 for observation N
@@ -28,8 +28,8 @@ transformed data {
 }
 parameters {
   vector[totalThresholds] threshold;
+  vector<lower=0>[NITEMS] alpha;
   matrix[NPA,NITEMS]      rawTheta;
-  vector<lower=0>[NITEMS] sigma;
   cholesky_factor_corr[NITEMS] rawThetaCorChol;
 }
 transformed parameters {
@@ -38,7 +38,7 @@ transformed parameters {
 
   // non-centered parameterization due to thin data
   for (pa in 1:NPA) {
-    theta[pa,] = (sigma .* (rawThetaCorChol * rawTheta[pa,]'))';
+    theta[pa,] = (rawThetaCorChol * rawTheta[pa,]')';
   }
   for (ix in 1:NITEMS) {
     int from = TOFFSET[ix];
@@ -54,15 +54,15 @@ model {
   for (pa in 1:NPA) {
     rawTheta[pa,] ~ normal(0,1);
   }
-  threshold ~ normal(0,2);
-  sigma ~ lognormal(1, 1);
+  threshold ~ normal(0, 2.0);
+  alpha ~ exponential(0.1);
   for (cmp in 1:NCMP) {
     if (refresh[cmp]) {
       int ix = item[cmp];
       int from = TOFFSET[ix];
       int to = TOFFSET[ix] + NTHRESH[ix] - 1;
       probSize = (2*NTHRESH[ix]+1);
-      prob[:probSize] = cmp_probs(scale,
+      prob[:probSize] = cmp_probs(scale[ix], alpha[ix],
                theta[pa1[cmp], ix],
                theta[pa2[cmp], ix], cumTh[from:to]);
     }
@@ -89,7 +89,7 @@ generated quantities {
       int from = TOFFSET[ix];
       int to = TOFFSET[ix] + NTHRESH[ix] - 1;
       probSize = (2*NTHRESH[ix]+1);
-      prob[:probSize] = cmp_probs(scale,
+      prob[:probSize] = cmp_probs(scale[ix], alpha[ix],
                theta[pa1[cmp], ix],
                theta[pa2[cmp], ix], cumTh[from:to]);
     }

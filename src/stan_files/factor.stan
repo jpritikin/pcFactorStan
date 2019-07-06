@@ -1,6 +1,6 @@
 #include /pre/license.stan
 functions {
-#include /functions/cmp_prob.stan
+#include /functions/cmp_prob2.stan
 }
 data {
   // dimensions
@@ -10,7 +10,8 @@ data {
   int<lower=1> NITEMS;
   int<lower=1> NTHRESH[NITEMS];         // number of thresholds
   int<lower=1> TOFFSET[NITEMS];
-  real scale;
+  vector[NITEMS] scale;
+  vector[NITEMS] alpha;
   // response data
   int<lower=1, upper=NPA> pa1[NCMP];        // PA1 for observation N
   int<lower=1, upper=NPA> pa2[NCMP];        // PA2 for observation N
@@ -28,17 +29,18 @@ transformed data {
 }
 parameters {
   vector[totalThresholds] threshold;
-  row_vector[NITEMS] rawUnique;      // do not interpret, see unique
   matrix[NPA,NITEMS] rawUniqueTheta; // do not interpret, see uniqueTheta
   vector[NPA] rawFactor;      // do not interpret, see factor
   vector[NITEMS] rawLoadings; // do not interpret, see factorLoadings
+  vector[NITEMS] rawUnique;      // do not interpret, see unique
 }
 transformed parameters {
   vector[totalThresholds] cumTh;
   matrix[NPA,NITEMS] theta;
   for (pa in 1:NPA) {
-    theta[pa,] = (rawFactor[pa] * rawLoadings)' +
-      rawUniqueTheta[pa,] .* rawUnique;
+    // theta must be normal(0,1) distributed
+    theta[pa,] = ((rawFactor[pa] * rawLoadings)' +
+                  rawUniqueTheta[pa,] .* rawUnique');
   }
   for (ix in 1:NITEMS) {
     int from = TOFFSET[ix];
@@ -51,19 +53,21 @@ model {
   int probSize;
 
   threshold ~ normal(0, 2.0);
-  rawFactor ~ normal(0, 1.0);
-  rawLoadings ~ normal(0, 1.0);
+  target += NITEMS * normal_lpdf(rawFactor | 0, 1.0);
+  for (ix in 1:NITEMS) {
+    rawLoadings[ix] ~ normal(0, 1);
+    rawUnique[ix] ~ normal(1, 1);
+  }
   for (pa in 1:NPA) {
     rawUniqueTheta[pa,] ~ normal(0, 1.0);
   }
-  rawUnique ~ normal(1.0, 1.0);
   for (cmp in 1:NCMP) {
     if (refresh[cmp]) {
       int ix = item[cmp];
       int from = TOFFSET[ix];
       int to = TOFFSET[ix] + NTHRESH[ix] - 1;
       probSize = (2*NTHRESH[ix]+1);
-      prob[:probSize] = cmp_probs(scale,
+      prob[:probSize] = cmp_probs(scale[ix], alpha[ix],
                theta[pa1[cmp], ix],
                theta[pa2[cmp], ix], cumTh[from:to]);
     }
@@ -79,7 +83,7 @@ generated quantities {
   vector[NITEMS] factorLoadings = rawLoadings;
   vector[NITEMS] factorProp;
   vector[NPA] factor = rawFactor;
-  row_vector[NITEMS] unique = rawUnique;
+  row_vector[NITEMS] unique = rawUnique';
   matrix[NPA,NITEMS] uniqueTheta = rawUniqueTheta;
 
   for (fx in 1:NITEMS) {

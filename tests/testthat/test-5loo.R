@@ -52,10 +52,10 @@ test_that("loo", {
   df <- filterGraph(df)
   df <- normalizeData(df)
   dl <- prepCleanData(df)
-  dl$scale <- 1.5
+  dl$scale <- rep(1.5, dl$NITEMS)
 
   # this *sometimes* generates warnings about divergent transitions
-  m1 <- pcStan("covariance_ll", dl, chains=4L, iter=1000L)
+  m1 <- pcStan("correlation_ll", dl, chains=4L, iter=1000L)
 
   loo1 <- toLoo(m1, cores=1)
   ot <- outlierTable(dl, loo1)
@@ -68,6 +68,7 @@ test_that("loo", {
   expect_true(sign(bad[1, item]) !=
                 sign(bad[nrow(bad), item]))
 
+  dl$alpha <- rep(1, dl$NITEMS)
   m2 <- pcStan("factor_ll", dl, chains=4L, iter=1000L)
   loo2 <- toLoo(m2, cores=1)
   ot <- outlierTable(dl, loo2)

@@ -63,7 +63,7 @@ test_that("generateFactorItems", {
   # Just ensure that nothing has changed.
   c1 <- cov(df[,paste0('i',1:3)])
   expect_equal(c1[lower.tri(c1, diag = TRUE)],
-               c(0.657, -0.138, -0.109, 0.572, 0.263, 0.627),
+               c(0.624, 0.142, 0.009, 0.644, -0.221, 0.579),
                tolerance=1e-3, scale=1)
 
   expect_error(generateFactorItems(df, 1),
@@ -71,5 +71,5 @@ test_that("generateFactorItems", {
   expect_error(generateFactorItems(df, c(.3,.4)),
                "At least 3 indicators are required")
   expect_error(generateFactorItems(df, c(1.3,.4,.4)),
-               "Proportions must be between 0 and 1")
+               "Signed proportions must be between -1 and 1")
 })
