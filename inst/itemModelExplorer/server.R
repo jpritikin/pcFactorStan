@@ -32,15 +32,24 @@ cmp_probs <- function(alpha, scale, rawDiff, thRaw) {
 
 calcProb <- function(par, theta) {
   sapply(theta, function(x) softmax(cmp_probs(par['discrimination'], par['scale'], x,
-    c(par['th1'], par['th2']))), USE.NAMES=FALSE)
+    par[-(1:2)])), USE.NAMES=FALSE)
 }
 
 shinyServer(function(input, output, session) {
-  par <- c(discrimination=1.749, scale=1, th1=.8, th2=1.7)
-  state <- reactiveValues(par = par)
+  state <- reactiveValues(
+    par = c(discrimination=2, scale=1, th1=.8, th2=1.6))
 
-  parNames <- names(par)
-  updateSelectInput(session, "editPar", choices = parNames, selected = parNames[1])
+  observe({
+    numThr <- input$numThresholds
+    if (numThr + 2 == length(par)) return()
+    oldPar <- isolate(state$par)
+    par <- oldPar[1:3]
+    if (numThr > 1) par <- c(par, rep(2*par[3], numThr-1))
+    names(par)[3:length(par)] <- paste0('th',1:numThr)
+    state$par <- par
+    updateSelectInput(session, "editPar", choices = names(par),
+                      selected = 'discrimination')
+  })
 
   observe({
      newVal <- input$editParValue
@@ -57,7 +66,7 @@ shinyServer(function(input, output, session) {
   })
 
   output$parView <- renderTable({
-    data.frame(par=state$par)
+    data.frame(name=names(state$par), par=state$par)
   })
 
   output$plot1 <- renderPlot({
