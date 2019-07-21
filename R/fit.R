@@ -427,8 +427,9 @@ assertDataFitCompat <- function(dl, fit) {
   if (pd$theta[1] != dl$NPA) {
     stop(paste0("dl has ",dl$NPA," objects but fit has ",pd$theta[1]," objects"))
   }
-  if (pd$theta[2] != dl$NITEMS) {
-    stop(paste0("dl has ",dl$NITEMS," items but fit has ",pd$theta[2]," items"))
+  fitItems <- ifelse(length(pd$theta)==1, 1, pd$theta[2])
+  if (!fitItems == dl$NITEMS) {
+    stop(paste0("dl has ",dl$NITEMS," items but fit has ",fitItems," items"))
   }
   if (pd$threshold != sum(dl$NTHRESH)) {
     stop(paste0("dl has ",dl$NTHRESH," thresholds across all items but fit has ",
@@ -496,11 +497,18 @@ responseCurve <- function(dl, fit, responseNames, item=dl$nameInfo$item,
     thrInd <- dl$TOFFSET[ii] + 1:dl$NTHRESH[ii] - 1L
     thrData <- extract(fit, pars=paste0("threshold[",thrInd,"]"))
     if ('alpha' %in% names(pd)) {
-      alphaData <- extract(fit, pars=paste0("alpha[",ii,"]"))[[1]]
+      if (length(pd$alpha) == 0) {
+        alphaData <- extract(fit, pars="alpha")[[1]]
+      } else {
+        alphaData <- extract(fit, pars=paste0("alpha[",ii,"]"))[[1]]
+      }
     } else {
       alphaData <- dl$alpha[ii]
     }
-    if (length(pick)==0) pick <- sample.int(length(thrData[[1]]), samples)
+    if (length(pick)==0) {
+      samples <- min(length(thrData[[1]]), samples)
+      pick <- sample.int(length(thrData[[1]]), samples)
+    }
     for (sx in 1:samples) {
       mask <- df$item == i1 & df$sample == sx
       p1 <- sapply(grid, function(gx) {
@@ -546,7 +554,7 @@ responseCurve <- function(dl, fit, responseNames, item=dl$nameInfo$item,
 parInterval <- function(fit, pars, label=withoutIndex(pars[1]),
                         nameVec, width=0.8) {
   probs <- 0.5 + c(-width/2, 0, width/2)
-  interval <- summary(fit, pars=pars, probs=probs)$summary[,4:6]
+  interval <- summary(fit, pars=pars, probs=probs)$summary[,4:6,drop=FALSE]
   colnames(interval) <- c("L","M","U")
   interval <- as.data.frame(interval)
   interval[[label]] <- factor(nameVec, levels=nameVec)
@@ -583,7 +591,10 @@ parDistributionCustom <- function(fit, pars, label=withoutIndex(pars[1]),
     if (length(dim(c1)) == 1) c1 <- as.matrix(c1)
     colnames(c1) <- nameVec[nextCol:(nextCol + ncol(c1) - 1L)]
     nextCol <- nextCol + ncol(c1)
-    if (length(pick) == 0) pick <- sample.int(nrow(c1), samples)
+    if (length(pick) == 0) {
+      samples <- min(nrow(c1), samples)
+      pick <- sample.int(nrow(c1), samples)
+    }
     c1 <- c1[pick,,drop=FALSE]
     tall1 <- melt(c1)
     colnames(tall1)[1:2] <- c('sample',label)
