@@ -21,3 +21,4 @@ export MAKEFLAGS=-j2
 echo "pkgbuild::compile_dll(); devtools::document(roclets = c('rd', 'collate', 'namespace'))" | R --vanilla
 
 R CMD build .
+#R CMD build --no-build-vignettes .
