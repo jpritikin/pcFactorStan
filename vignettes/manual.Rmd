@@ -6,7 +6,7 @@ output:
     toc: true
     toc_depth: 2
 vignette: >
-  %\VignetteIndexEntry{manual}
+  %\VignetteIndexEntry{Getting started with pcFactorStan}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -280,8 +280,7 @@ rownames(alpha) <- covItemNames
 print(alpha[alpha[,'sd']>.25,,drop=FALSE])
 ```
 ```{r, results='asis', echo=FALSE}
-#kable(alpha[alpha[,'sd']>.25,,drop=FALSE])
-kable(alpha)
+kable(alpha[alpha[,'sd']>.25,,drop=FALSE])
 ```
 
 I already decided to exclude _waiting_ by inspection of
@@ -297,7 +296,7 @@ magnitude of factor proportions at the expense of
 `threshold` accuracy.
 To treat `alpha` as non-stochastic reduces variability
 in the factor model, but not by much.
-Note that the marginal posterior standard deviations of `alpha` are all less than 0.25.
+The marginal posterior standard deviations of `alpha` are all less than 0.25.
 
 I will fit model 'factor_ll' instead of 'factor' so I can use the
 **loo** package to look for outliers.
@@ -340,18 +339,6 @@ interest <- c("threshold", "factorLoadings",  "factorProp", "factor",
 allPars <- summary(fit3, pars=interest, probs=0.5)$summary
 print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
-```
-
-```{r responseCurves2, cache=TRUE}
-df <- responseCurve(dl, fit3,
-  responseNames=c("much more","somewhat more", 'equal',
-                  "somewhat less", "much less"))
-ggplot(df) +
-  geom_line(aes(x=worthDiff,y=prob,color=response,linetype=response,
-                group=responseSample), size=.2, alpha=.2) +
-  xlab("difference in latent worths") + ylab("probability") +
-  ylim(0,1) + facet_wrap(~item) +
-    guides(color=guide_legend(override.aes=list(alpha = 1, size=1)))
 ```
 
 The maximum $\widehat R$ is too high or the effective sample size is too low.
@@ -482,7 +469,7 @@ ggplot(pi) +
   theme(axis.title.y=element_blank()) 
 ```
 
-And there you have it. If you have not already,
+And there you have it. If you have not done so already,
 go find a dojo and commence study of martial arts!
 
 # Technical notes
