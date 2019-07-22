@@ -346,7 +346,7 @@ The maximum $\widehat R$ is too high or the effective sample size is too low.0
 We need to try again with more iterations,
 
 ```{r factor2, message=FALSE, results='hide', cache=FALSE}
-fit3 <- pcStan("factor_ll", data=dl, include=FALSE, iter=5000L, chains=6L,
+fit3 <- pcStan("factor_ll", data=dl, include=FALSE, iter=6000L, chains=6L,
                pars=c('rawUnique', 'rawUniqueTheta', 'rawFactor', 'rawLoadings'))
 ```
 
@@ -377,7 +377,7 @@ kable(ot)
 Observations with $k>0.5$ can be regarded as outliers.
 Every sampling run may identify outliers in a slightly different order.
 We use a threshold of `r kThreshold` instead of 0.5 to ensure
-that a few lines are shown.
+that at least a few lines are shown.
 
 ```{r}
 xx <- which(ot[,'pa1'] == 'tennis' & ot[,'pa2'] == 'water skiing' & ot[,'item'] == 'predict' & ot[,'pick'] == -2)
