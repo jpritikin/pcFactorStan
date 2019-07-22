@@ -345,7 +345,7 @@ print(max(allPars[,'Rhat']))
 The maximum $\widehat R$ is too high or the effective sample size is too low.0
 We need to try again with more iterations,
 
-```{r factor2, message=FALSE, results='hide', cache=TRUE}
+```{r factor2, message=FALSE, results='hide', cache=FALSE}
 fit3 <- pcStan("factor_ll", data=dl, include=FALSE, iter=5000L, chains=6L,
                pars=c('rawUnique', 'rawUniqueTheta', 'rawFactor', 'rawLoadings'))
 ```
