@@ -14,6 +14,20 @@ test_that("responseCurve", {
   expect_true(all(diff(subset(rc, response=='a' & sample == 1)$prob) < 0))
   expect_true(all(diff(subset(rc, response=='e' & sample == 2)$prob) > 0))
 
+  squash <- phyActFlowPropensity[,c(1,2,3)]
+  squash <- squash[!is.na(squash$skill),]
+  squash[squash$skill == 2, 'skill'] <- 1
+  squash[squash$skill == -2, 'skill'] <- -1
+  dl4 <- prepData(squash)
+  expect_error(responseCurve(dl4, f1, letters[1:3]),
+               "1 thresholds across all items but fit has 2 thresholds")
+  expect_error(responseCurve(letters, f1),
+               "dl must be a list of data")
+  expect_error(responseCurve(dl1, letters[1:5]),
+               "fit must be a stanfit object")
+  expect_error(responseCurve(dl1, f1, letters[1:5], "zorg"),
+               "Item not found: zorg")
+
   dl2 <- prepData(phyActFlowPropensity[,c(1:5)])
   dl2$scale <- rnorm(dl2$NITEMS, .8, .1)
   m2 <- findModel("correlation")
@@ -23,6 +37,12 @@ test_that("responseCurve", {
   expect_true(all(diff(subset(rc, response=='a' & sample == 1)$prob) < 0))
   expect_true(all(diff(subset(rc, response=='e' & sample == 2)$prob) > 0))
 
+  dl3 <- prepCleanData(filterGraph(phyActFlowPropensity[,c(1:5)],
+                                   minAny = 15, minDifferent = 3))
+  expect_error(responseCurve(dl3, f2, letters[1:5]),
+               "dl has 49 objects but fit has 61 objects")
+  expect_error(responseCurve(dl2, f2, letters[1:4]),
+               "different number of responseNames")
   expect_error(responseCurve(dl2, f1, letters[1:5]),
                "dl has 3 items but fit has 1 items")
   expect_error(responseCurve(dl1, f2, letters[1:5]),

@@ -432,7 +432,7 @@ assertDataFitCompat <- function(dl, fit) {
     stop(paste0("dl has ",dl$NITEMS," items but fit has ",fitItems," items"))
   }
   if (pd$threshold != sum(dl$NTHRESH)) {
-    stop(paste0("dl has ",dl$NTHRESH," thresholds across all items but fit has ",
+    stop(paste0("dl has a total of ",dl$NTHRESH," thresholds across all items but fit has ",
                 pd$threshold," thresholds"))
   }
 }
@@ -493,7 +493,6 @@ responseCurve <- function(dl, fit, responseNames, item=dl$nameInfo$item,
   pick <- c()
   for (i1 in item) {
     ii <- match(i1, dl$nameInfo$item)
-    if (is.na(ii)) stop(paste0("Cannot find item '", i1,"'"))
     thrInd <- dl$TOFFSET[ii] + 1:dl$NTHRESH[ii] - 1L
     thrData <- extract(fit, pars=paste0("threshold[",thrInd,"]"))
     if ('alpha' %in% names(pd)) {
