@@ -25,7 +25,8 @@ library(ggplot2)
 library(reshape2)
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  cache.lazy = FALSE  # https://github.com/yihui/knitr/issues/572
 )
 options(digits=2)
 options(scipen=2)
