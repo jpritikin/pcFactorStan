@@ -128,7 +128,7 @@ print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
 
-Again, everything looks good. If the targets values were not reached
+Again, everything looks good. If the target values were not reached
 then we would sample the model again with more iterations.
 Time for a plot,
 
@@ -179,7 +179,7 @@ print(result)
 kable(result)
 ```
 
-The items _goal1_ and _feedback1_ ran into trouble.
+Items _goal1_ and _feedback1_ ran into trouble.
 A nonzero count of divergent transitions or low_bfmi means that these items contained too little signal to estimate. We could try again with `varCorrection=1.0`, but we are going to exclude them instead.
 The model succeeded on the rest of the items.
 I requested `iter=1000L` to demonstrate how `calibrateItems` will resample the model until the `n_eff` is large enough and the `Rhat` small enough. Item _skill_ (among others) needed more than 1000 samples to converge.
@@ -268,8 +268,8 @@ response model can be found in the man page for `responseCurve`.
 A large `alpha` (>1) can mean that the item discriminates among
 objects well. However, it can also mean that the model
 predicts all responses will be _equal_. If most observed responses are
-indeed _equal_ then this can result in good model fit, but the
-practical interpretation is that the item is useless.
+indeed _equal_ then this can result in good model fit, but another
+interpretation is that the item is useless.
 
 ```{r}
 alpha <- summary(fit2, pars=c("alpha"), probs=c(.5))$summary
@@ -285,7 +285,7 @@ kable(alpha[alpha[,'sd']>.25,,drop=FALSE])
 
 I already decided to exclude _waiting_ by inspection of
 the correlation matrix, but it looks like
-the Item _chatter_ should be excluded as well.
+Item _chatter_ should be excluded as well.
 
 We will enter the `alpha` parameters into the factor model
 as non-stochastic data.
@@ -296,7 +296,7 @@ magnitude of factor proportions at the expense of
 `threshold` accuracy.
 To treat `alpha` as non-stochastic reduces variability
 in the factor model, but not by much.
-The marginal posterior standard deviations of `alpha` are all less than 0.25.
+Simulations indicate that the posterior distribution remains well calibrated.
 
 I will fit model 'factor_ll' instead of 'factor' so I can use the
 **loo** package to look for outliers.
@@ -322,8 +322,8 @@ fit3 <- pcStan("factor_ll", data=dl, include=FALSE,
                pars=c('rawUnique', 'rawUniqueTheta', 'rawFactor', 'rawLoadings'))
 ```
 
-To check the fit diagnostics, we have to take care only to
-examine the parameters of interest. The factor model outputs
+To check the fit diagnostics, we have to take care to
+examine only the parameters of interest. The factor model outputs
 many parameters that should not be interpreted. For example, we do not
 care about `log_lik` because this vector contains per-observation
 likelihoods for **loo**.
@@ -341,11 +341,11 @@ print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
 
-The maximum $\widehat R$ is too high or the effective sample size is too low.
+The maximum $\widehat R$ is too high or the effective sample size is too low.0
 We need to try again with more iterations,
 
 ```{r factor2, message=FALSE, results='hide', cache=TRUE}
-fit3 <- pcStan("factor_ll", data=dl, include=FALSE, iter=4000L, chains=6L,
+fit3 <- pcStan("factor_ll", data=dl, include=FALSE, iter=5000L, chains=6L,
                pars=c('rawUnique', 'rawUniqueTheta', 'rawFactor', 'rawLoadings'))
 ```
 
@@ -363,7 +363,7 @@ We create a `loo` object and pass that to `outlierTable`.
 ```{r factorLoo, cache=TRUE}
 options(mc.cores=1)  # otherwise loo consumes too much RAM 
 l1 <- toLoo(fit3)
-kThreshold <- 0.35
+kThreshold <- 0.3
 ot <- outlierTable(dl, l1, kThreshold)
 ```
 ```{r, results='hide'}
@@ -379,7 +379,7 @@ We use a threshold of `r kThreshold` instead of 0.5 to ensure
 that a few lines are shown.
 
 ```{r}
-xx <- which(ot[,'pa1'] == 'tennis' & ot[,'pa2'] == 'water skiing' & ot[,'pick'] == -2)
+xx <- which(ot[,'pa1'] == 'tennis' & ot[,'pa2'] == 'water skiing' & ot[,'item'] == 'predict' & ot[,'pick'] == -2)
 ```
 
 We will take a closer look at row `r xx`.
