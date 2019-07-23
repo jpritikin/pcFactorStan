@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
   comment = "#>",
   cache.lazy = FALSE  # https://github.com/yihui/knitr/issues/572
 )
-options(digits=2)
+options(digits=4)
 options(scipen=2)
 ```
 
@@ -124,7 +124,7 @@ Everything looks good, but there are a few more things to check.
 We want $\widehat R$ < 1.015 and effective sample size greater than 100 times the number of chains (Vehtari et al., 2019).
 
 ```{r pcStanDiag2, cache=TRUE}
-allPars <- summary(fit1, probs=c())$summary
+allPars <- summary(fit1, probs=c())$summary 
 print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
@@ -203,7 +203,7 @@ fit2 <- pcStan("correlation", data=dl, include=FALSE, pars=c('rawTheta', 'rawThe
 ```{r covarianceDiag1, cache=TRUE}
 check_hmc_diagnostics(fit2) 
 
-allPars <- summary(fit2, probs=0.5)$summary
+allPars <- summary(fit2, probs=0.5)$summary 
 print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
@@ -220,7 +220,7 @@ including the entries that are not stochastic but are fixed to constant values.
 We need to filter those out to get sensible results.
 
 ```{r covarianceDiag3, cache=TRUE}
-allPars <- allPars[allPars[,'sd'] > 1e-6,] 
+allPars <- allPars[allPars[,'sd'] > 1e-6,]  
 print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
@@ -337,23 +337,57 @@ check_hmc_diagnostics(fit3)
 interest <- c("threshold", "factorLoadings",  "factorProp", "factor",
  "unique", "uniqueTheta", "lp__")
 
-allPars <- summary(fit3, pars=interest, probs=0.5)$summary
+allPars <- summary(fit3, pars=interest)$summary
 print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
 
-The maximum $\widehat R$ is too high or the effective sample size is too low.0
-We need to try again with more iterations,
+Usually a low effective sample size would suggest that the Markov chains need to run
+for more iterations. However, I tried that and it did not help.
+At 4000 or even 6000 iterations, `n_eff` still did not improve. Which parameters
+are difficult to sample?
 
-```{r factor2, message=FALSE, results='hide', cache=FALSE}
-fit3 <- pcStan("factor_ll", data=dl, include=FALSE, iter=6000L, chains=6L,
+```{r factorDiag2, cache=TRUE}
+print(allPars[head(order(allPars[,'n_eff'])),])
+```
+
+Interesting! The most troublesome parameter is `unique[6]`. Let us
+dig more,
+
+```{r body, cache=TRUE}
+print(dl$nameInfo$item[6])
+print(summary(fit3, pars=c('factorProp[6]', 'unique[6]', 'factorLoadings[6]'))$summary)
+```
+
+The effective sample size is large enough for `factorProp[6]` even
+though this quantity is partially derived from `unique[6]`.
+Here we find that the factor proportion for Item _body_ is not
+statistically different from zero at the $\alpha=.05$ level.
+Rather that trying to force this model to converge somehow,
+Item _body_ can be discarded.
+
+```{r factorData2, cache=TRUE}
+pafp <- pafp[,c(paste0('pa',1:2),
+             setdiff(covItemNames, c('spont','control','evaluated','waiting','chatter','body')))]
+pafp <- normalizeData(filterGraph(pafp))
+dl <- prepCleanData(pafp)
+dl$scale <- result[match(dl$nameInfo$item, result$item), 'scale']
+dl$alpha <- alpha[match(dl$nameInfo$item, rownames(alpha)), 'mean']
+```
+
+We rerun the model,
+
+```{r factor2, message=FALSE, results='hide', cache=TRUE}
+fit3 <- pcStan("factor_ll", data=dl, include=FALSE, iter=4000,
                pars=c('rawUnique', 'rawUniqueTheta', 'rawFactor', 'rawLoadings'))
 ```
 
-```{r factor2Diag1, cache=TRUE}
-check_hmc_diagnostics(fit3)
+Let us check the diagnostics,
 
-allPars <- summary(fit3, pars=interest, probs=0.5)$summary
+```{r factor2Diag1, cache=TRUE}
+check_hmc_diagnostics(fit3) 
+
+allPars <- summary(fit3, pars=interest, probs=0.5)$summary 
 print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
@@ -425,7 +459,7 @@ sum(c(pafp$pa1 == ot[xx,'pa2'], pafp$pa2 == ot[xx,'pa2']))
 ```
 
 Ah, no wonder, predictability's 95% uncertainty interval for `r ot[xx,'pa2']`
-is from `r exam[2,'2.5%']` to `r exam[2,'98%']`.
+is from `r exam[2,'2.5%']` to `r exam[2,'97.5%']`.
 So there is practically no information.
 We could continue our investigation by looking at which
 responses justified these _predict_ estimates.
