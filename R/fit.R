@@ -529,6 +529,16 @@ responseCurve <- function(dl, fit, responseNames, item=dl$nameInfo$item,
   df
 }
 
+#' Remove the array indexing from a parameter name
+#' @param name a parameter name
+#' @return the name without the square bracket parameter indexing
+#' @examples
+#' withoutIndex("foo[1,2")
+#' @export
+withoutIndex <- function(name) {
+  sub("\\[[\\d,]+\\]$", "", name, perl=TRUE)
+}
+
 #' Produce data suitable for plotting parameter estimates
 #' 
 #' @template args-fit

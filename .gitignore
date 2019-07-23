@@ -20,4 +20,5 @@
 /man/parDistributionCustom.Rd
 /man/parInterval.Rd
 /man/responseCurve.Rd
+/man/withoutIndex.Rd
 inst/doc
