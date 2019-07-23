@@ -560,8 +560,8 @@ withoutIndex <- function(name) {
 #' @family data extractor
 #' @examples
 #' \donttest{ vignette('manual', 'pcFactorStan') }
-parInterval <- function(fit, pars, label=withoutIndex(pars[1]),
-                        nameVec, width=0.8) {
+parInterval <- function(fit, pars, nameVec,
+                        label=withoutIndex(pars[1]), width=0.8) {
   probs <- 0.5 + c(-width/2, 0, width/2)
   interval <- summary(fit, pars=pars, probs=probs)$summary[,4:6,drop=FALSE]
   colnames(interval) <- c("L","M","U")
@@ -590,8 +590,8 @@ parInterval <- function(fit, pars, label=withoutIndex(pars[1]),
 #' @family data extractor
 #' @examples
 #' \donttest{ vignette('manual', 'pcFactorStan') }
-parDistributionCustom <- function(fit, pars, label=withoutIndex(pars[1]),
-                                  nameVec, samples=500) {
+parDistributionCustom <- function(fit, pars, nameVec,
+                                  label=withoutIndex(pars[1]), samples=500) {
   colSet <- extract(fit, pars)
   nextCol <- 1L
   pick <- c()
@@ -616,5 +616,5 @@ parDistributionCustom <- function(fit, pars, label=withoutIndex(pars[1]),
 #' @rdname parDistributionCustom
 #' @export
 parDistributionFor <- function(fit, pi, samples=500) {
-  parDistributionCustom(fit, rownames(pi), colnames(pi)[4], pi[[4]])
+  parDistributionCustom(fit, rownames(pi), nameVec=pi[[4]], label=colnames(pi)[4])
 }

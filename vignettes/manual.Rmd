@@ -467,7 +467,7 @@ However, let us move on and
 plot the marginal posterior distributions of the factor proportions,
 
 ```{r factorProp, cache=TRUE}
-pi <- parInterval(fit3, 'factorProp', label='item', dl$nameInfo$item) 
+pi <- parInterval(fit3, 'factorProp', dl$nameInfo$item, label='item') 
 pi <- pi[order(abs(pi$M)),]
 pi$item <- factor(pi$item, levels=pi$item)
 
@@ -490,7 +490,7 @@ activities with a sample size of at least 11.
 ```{r activities, cache=TRUE}
 pa11 <- levels(filterGraph(pafp, minDifferent=11L)$pa1) 
 pick <- paste0('factor[',match(pa11, dl$nameInfo$pa),']')
-pi <- parInterval(fit3, pick, 'activity', pa11)
+pi <- parInterval(fit3, pick, pa11, label='activity')
 pi <- pi[order(pi$M),]
 pi$activity <- factor(pi$activity, levels=pi$activity)
 

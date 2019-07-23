@@ -64,7 +64,9 @@ test_that("parInterval+parDistributionFor", {
   m1 <- findModel("unidim")
   f1 <- sampling(m1, dl1, chains=1, cores=0, iter=100, refresh=0)
   label <- "discrimination"
-  pi <- parInterval(f1, "alpha", label, "alpha")
+  pi <- parInterval(f1, "alpha", nameVec="alpha")
+  expect_equal(colnames(pi)[4], "alpha")
+  pi <- parInterval(f1, "alpha", "alpha", label)
   expect_equal(nrow(pi), 1)
   expect_equal(ncol(pi), 4)
   expect_equal(rownames(pi), "alpha")
@@ -74,7 +76,9 @@ test_that("parInterval+parDistributionFor", {
   expect_equivalent(c(table(pd$value < pi$M)), c(25,25))
 
   label <- "activity"
-  pi <- parInterval(f1, "theta", label, dl1$nameInfo$pa)
+  pi <- parInterval(f1, "theta", dl1$nameInfo$pa)
+  expect_equal(colnames(pi)[4], "theta")
+  pi <- parInterval(f1, "theta", dl1$nameInfo$pa, label)
   expect_equal(nrow(pi), 61)
   expect_equal(ncol(pi), 4)
   expect_equal(rownames(pi), paste0('theta[',1:61,']'))
