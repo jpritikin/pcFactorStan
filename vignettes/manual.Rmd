@@ -171,7 +171,7 @@ Fortunately, `calibrateItems` takes care of it and produces a table
 of the pertinent data,
 
 ```{r calibrateItems, message=FALSE, results='hide', cache=TRUE}
-result <- calibrateItems(phyActFlowPropensity, iter=1000L)
+result <- calibrateItems(phyActFlowPropensity, iter=1000L) 
 ```
 ```{r, results='hide'}
 print(result)
@@ -180,16 +180,21 @@ print(result)
 kable(result)
 ```
 
-Items _goal1_ and _feedback1_ ran into trouble.
-A nonzero count of divergent transitions or low_bfmi means that these items contained too little signal to estimate. We could try again with `varCorrection=1.0`, but we are going to exclude them instead.
+Item _goal1_ ran into trouble.
+A nonzero count of divergent transitions or low_bfmi means that the item
+contained too little signal to estimate.
+Item _feedback1_ is also prone to failure.
+We could try again with `varCorrection=1.0`,
+but we are going to exclude these items instead.
 The model succeeded on the rest of the items.
-I requested `iter=1000L` to demonstrate how `calibrateItems` will resample the model until the `n_eff` is large enough and the `Rhat` small enough. Item _skill_ (among others) needed more than 1000 samples to converge.
+I requested `iter=1000L` to demonstrate how `calibrateItems` will resample the model until the `n_eff` is large enough and the `Rhat` small enough.
+As demonstrated in the _iter_ column, some items needed more than 1000 samples to converge.
 
 Next we will fit the correlation model. We exclude the Cholesky
 factor of the correlation matrix `rawThetaCorChol` because the
 regular correlation matrix is also output.
 ```{r covarianceData, cache=TRUE}
-pafp <- phyActFlowPropensity
+pafp <- phyActFlowPropensity 
 excl <- match(c('goal1','feedback1'), colnames(pafp))
 pafp <- pafp[,-excl]
 dl <- prepData(pafp)
@@ -197,11 +202,11 @@ dl$scale <- result[-excl,'scale']
 ```
 
 ```{r covariance, message=FALSE, results='hide', cache=TRUE}
-fit2 <- pcStan("correlation", data=dl, include=FALSE, pars=c('rawTheta', 'rawThetaCorChol')) 
+fit2 <- pcStan("correlation", data=dl, include=FALSE, pars=c('rawTheta', 'rawThetaCorChol'))
 ```
 
 ```{r covarianceDiag1, cache=TRUE}
-check_hmc_diagnostics(fit2) 
+check_hmc_diagnostics(fit2)
 
 allPars <- summary(fit2, probs=0.5)$summary 
 print(min(allPars[,'n_eff']))
@@ -212,7 +217,7 @@ Something is wrong with the `n_eff` and $\widehat R$.
 Let us look more carefully,
 
 ```{r covarianceDiag2, cache=TRUE}
-head(allPars[order(allPars[,'sd']),]) 
+head(allPars[order(allPars[,'sd']),])
 ```
 
 Ah ha! It looks like all the entries of the correlation matrix are reported,
@@ -220,7 +225,7 @@ including the entries that are not stochastic but are fixed to constant values.
 We need to filter those out to get sensible results.
 
 ```{r covarianceDiag3, cache=TRUE}
-allPars <- allPars[allPars[,'sd'] > 1e-6,]  
+allPars <- allPars[allPars[,'sd'] > 1e-6,] 
 print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
@@ -230,7 +235,7 @@ many ways to visualize a correlation matrix. One of my favorite
 ways is to plot it using the **qgraph** package,
 
 ```{r covPlot, cache=TRUE}
-covItemNames <- dl$nameInfo$item
+covItemNames <- dl$nameInfo$item 
 tc <- summary(fit2, pars=c("thetaCor"), probs=c(.5))$summary[,'50%']
 tcor <- matrix(tc, length(covItemNames), length(covItemNames))
 dimnames(tcor) <- list(covItemNames, covItemNames)
@@ -251,7 +256,7 @@ For now, let us focus on the mechanics of data analysis.
 Here are item response curves,
 
 ```{r responseCurves, cache=TRUE}
-df <- responseCurve(dl, fit2, 
+df <- responseCurve(dl, fit2,
   item=setdiff(dl$nameInfo$item, c('spont','control','evaluated','waiting')),
   responseNames=c("much more","somewhat more", 'equal',
                   "somewhat less", "much less"))
@@ -269,8 +274,8 @@ response model can be found in the man page for `responseCurve`.
 A large `alpha` (>1) can mean that the item discriminates among
 objects well. However, it can also mean that the model
 predicts all responses will be _equal_. If most observed responses are
-indeed _equal_ then this can result in good model fit, but another
-interpretation is that the item is useless.
+indeed _equal_ then this can result in good model fit, but we
+can also infer that the item is useless.
 
 ```{r}
 alpha <- summary(fit2, pars=c("alpha"), probs=c(.5))$summary
@@ -285,8 +290,8 @@ kable(alpha[alpha[,'sd']>.25,,drop=FALSE])
 ```
 
 I already decided to exclude _waiting_ by inspection of
-the correlation matrix, but it looks like
-Item _chatter_ should be excluded as well.
+the correlation matrix.
+Item _chatter_ is on the borderline, but we can retain it.
 
 We will enter the `alpha` parameters into the factor model
 as non-stochastic data.
@@ -307,8 +312,8 @@ to the data. Hence, we update `pafp` using the usual the data cleaning sequence
 of `filterGraph` and `normalizeData` and pass the result to `prepCleanData`.
 
 ```{r factorData1, cache=TRUE}
-pafp <- pafp[,c(paste0('pa',1:2),
-             setdiff(covItemNames, c('spont','control','evaluated','waiting','chatter')))]
+pafp <- pafp[,c(paste0('pa',1:2), 
+             setdiff(covItemNames, c('spont','control','evaluated','waiting')))]
 pafp <- normalizeData(filterGraph(pafp))
 dl <- prepCleanData(pafp)
 dl$scale <- result[match(dl$nameInfo$item, result$item), 'scale']
@@ -319,7 +324,7 @@ rm(fit2)  # free up some memory
 ```
 
 ```{r factor, message=FALSE, results='hide', cache=TRUE}
-fit3 <- pcStan("factor_ll", data=dl, include=FALSE, 
+fit3 <- pcStan("factor_ll", data=dl, include=FALSE, iter=3000,
                pars=c('rawUnique', 'rawUniqueTheta', 'rawFactor', 'rawLoadings'))
 ```
 
@@ -332,7 +337,7 @@ We also ignore `theta` because it is a function
 of the other parameters.
 
 ```{r factorDiag1, cache=TRUE}
-check_hmc_diagnostics(fit3)
+check_hmc_diagnostics(fit3) 
 
 interest <- c("threshold", "factorLoadings",  "factorProp", "factor",
  "unique", "uniqueTheta", "lp__")
@@ -342,62 +347,12 @@ print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
 
-Usually a low effective sample size would suggest that the Markov chains need to run
-for more iterations. However, I tried that and it did not help.
-At 4000 or even 6000 iterations, `n_eff` still did not improve. Which parameters
-are difficult to sample?
-
-```{r factorDiag2, cache=TRUE}
-print(allPars[head(order(allPars[,'n_eff'])),])
-```
-
-Interesting! The most troublesome parameter is `unique[6]`. Let us
-dig more,
-
-```{r body, cache=TRUE}
-print(dl$nameInfo$item[6])
-print(summary(fit3, pars=c('factorProp[6]', 'unique[6]', 'factorLoadings[6]'))$summary)
-```
-
-The effective sample size is large enough for `factorProp[6]` even
-though this quantity is partially derived from `unique[6]`.
-Here we find that the factor proportion for Item _body_ is not
-statistically different from zero at the $\alpha=.05$ level.
-Rather that trying to force this model to converge somehow,
-Item _body_ can be discarded.
-
-```{r factorData2, cache=TRUE}
-pafp <- pafp[,c(paste0('pa',1:2),
-             setdiff(covItemNames, c('spont','control','evaluated','waiting','chatter','body')))]
-pafp <- normalizeData(filterGraph(pafp))
-dl <- prepCleanData(pafp)
-dl$scale <- result[match(dl$nameInfo$item, result$item), 'scale']
-dl$alpha <- alpha[match(dl$nameInfo$item, rownames(alpha)), 'mean']
-```
-
-We rerun the model,
-
-```{r factor2, message=FALSE, results='hide', cache=TRUE}
-fit3 <- pcStan("factor_ll", data=dl, include=FALSE, iter=4000,
-               pars=c('rawUnique', 'rawUniqueTheta', 'rawFactor', 'rawLoadings'))
-```
-
-Let us check the diagnostics,
-
-```{r factor2Diag1, cache=TRUE}
-check_hmc_diagnostics(fit3) 
-
-allPars <- summary(fit3, pars=interest, probs=0.5)$summary 
-print(min(allPars[,'n_eff']))
-print(max(allPars[,'Rhat']))
-```
-
 Looks good! Let us see which data are the most unexpected by the model.
 We create a `loo` object and pass that to `outlierTable`.
 
 ```{r factorLoo, cache=TRUE}
 options(mc.cores=1)  # otherwise loo consumes too much RAM 
-l1 <- toLoo(fit3)
+l1 <- toLoo(fit3) 
 kThreshold <- 0.3
 ot <- outlierTable(dl, l1, kThreshold)
 ```
@@ -405,13 +360,14 @@ ot <- outlierTable(dl, l1, kThreshold)
 print(ot)
 ```
 ```{r, results='asis', echo=FALSE}
-kable(ot)
+kable(ot, row.names=TRUE)
 ```
 
 Observations with $k>0.5$ can be regarded as outliers.
-Every sampling run may identify outliers in a slightly different order.
+Due to Monte Carlo error,
+every sampling run may identify outliers in a slightly different order.
 We use a threshold of `r kThreshold` instead of 0.5 to ensure
-that at least a few lines are shown.
+that ample lines are shown.
 
 ```{r}
 xx <- which(ot[,'pa1'] == 'tennis' & ot[,'pa2'] == 'water skiing' & ot[,'item'] == 'predict' & ot[,'pick'] == -2)
@@ -440,11 +396,12 @@ Let us look a little deeper to understand why this response
 was unexpected.
 
 ```{r outlier, cache=TRUE}
-loc <- sapply(ot[xx,c('pa1','pa2','item')], unfactor) 
+loc <- sapply(ot[xx,c('pa1','pa2','item')], unfactor)
 exam <- summary(fit3, pars=paste0("theta[",loc[paste0('pa',1:2)],
                           ",", loc['item'],"]"))$summary
 ```
 ```{r, results='asis', echo=FALSE}
+#exam <- data.frame(mean=c(0,0), '2.5%'=c(0,0), '97.5%'=c(0,0))
 kable(exam)
 ```
 
@@ -467,7 +424,7 @@ However, let us move on and
 plot the marginal posterior distributions of the factor proportions,
 
 ```{r factorProp, cache=TRUE}
-pi <- parInterval(fit3, 'factorProp', dl$nameInfo$item, label='item') 
+pi <- parInterval(fit3, 'factorProp', dl$nameInfo$item, label='item')
 pi <- pi[order(abs(pi$M)),]
 pi$item <- factor(pi$item, levels=pi$item)
 
@@ -488,7 +445,7 @@ look at the per-activity factor scores, we can limit ourselves to
 activities with a sample size of at least 11.
 
 ```{r activities, cache=TRUE}
-pa11 <- levels(filterGraph(pafp, minDifferent=11L)$pa1) 
+pa11 <- levels(filterGraph(pafp, minDifferent=11L)$pa1)
 pick <- paste0('factor[',match(pa11, dl$nameInfo$pa),']')
 pi <- parInterval(fit3, pick, pa11, label='activity')
 pi <- pi[order(pi$M),]
