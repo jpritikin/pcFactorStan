@@ -408,6 +408,7 @@ outlierTable <- function(data, x, threshold=0.5) {
              item=data$item[offset],
              pick=data$pick[offset],
              k=pareto_k_values(x)[ids])
+  df <- df[!duplicated(offset),]
   for (k in paste0('pa',1:2)) {
     levels(df[[k]]) <- palist
     class(df[[k]]) <- 'factor'
