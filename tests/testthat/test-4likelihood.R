@@ -23,7 +23,7 @@ test_that("unidim", {
   dl$varCorrection <- 2.0
   m1 <- findModel("unidim_adapt")
   f1 <- sampling(m1, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
-  expect_equal(get_logposterior(f1)[[1]], -3385.908, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f1)[[1]], -3060.868, tolerance=1e-2, scale=1)
 
   dl$scale <- 1.0
   m2 <- findModel("unidim_ll")
@@ -35,14 +35,15 @@ test_that("unidim", {
 })
 
 test_that("correlation", {
+  set.seed(1)
   dl <- prepData(phyActFlowPropensity)
-  dl$scale <- rep(1.5, dl$NITEMS)
+  dl$scale <- rnorm(dl$NITEMS, sd=.2)
   m2 <- findModel("correlation_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
-  expect_equal(get_logposterior(f2)[[1]], -140748.589, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -59564.49, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
-               c(-143.868, -11.167, -3.198, -1.498, 0), tolerance=1e-2, scale=1)
+               c(-23.025, -4.753, -1.724, -1.386, 0), tolerance=1e-2, scale=1)
 })
 
 test_that("factor", {
@@ -102,6 +103,6 @@ test_that("calibrateItems", {
   expect_true(result[3,'low_bfmi'] > 0 ||
                 result[3,'divergent'] > 0)
   expect_true(result[3,'n_eff'] < 400)
-  expect_equal(result[1:2,'scale'], c(.495, .576),
+  expect_equal(result[1:2,'scale'], c(.469, .535),
                tolerance=.01, scale=1)
 })
