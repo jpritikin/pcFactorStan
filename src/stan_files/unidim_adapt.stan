@@ -30,7 +30,7 @@ parameters {
 }
 transformed parameters {
   vector[NTHRESH] cumTh = cumulative_sum(threshold);
-  real scale = variance(theta) ^ varCorrection;
+  real scale = (sd(theta) ^ varCorrection)/1.749;
 }
 model {
   vector[NTHRESH*2 + 1] prob;

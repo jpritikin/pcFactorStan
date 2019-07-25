@@ -53,7 +53,7 @@ sub mkUnidim {
     my $data = $adapt? "varCorrection" : "scale";
     my $par = $adapt? "sigma" : "alpha";
     my $scaleDef = $adapt? "
-  real scale = variance(theta) ^ varCorrection;" : "";
+  real scale = (sd(theta) ^ varCorrection)/1.749;" : "";
     my $theta_sd = $adapt? "sigma" : "1.0";
     my $prior = $adapt? 'sigma ~ lognormal(1, 1);' : $alpha_prior;
     my $cmp_alpha = $adapt? '' : ', alpha';
