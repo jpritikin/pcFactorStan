@@ -328,7 +328,7 @@ twoLevelGraph <- function(name, N, shape1=0.8, shape2=0.5) {
 #'
 #' @description
 #'
-#' Vertices not part of the largest connected component are excluded.
+#' Vertices not part of the largest connected component are excluded (Hopcroft & Tarjan, 1973).
 #' Vertices that have fewer than \code{minAny} edges and are not
 #' connected to \code{minDifferent} or more different vertices are
 #' excluded. For example, vertex \sQuote{a} connected to vertices
@@ -353,6 +353,10 @@ twoLevelGraph <- function(name, N, shape1=0.8, shape2=0.5) {
 #'   vertices.
 #'
 #' @importFrom igraph graph_from_edgelist components incident
+#' @references
+#' Hopcroft, J., & Tarjan, R. (1973). Algorithm 447: Efficient algorithms for graph
+#' manipulation. \emph{Communications of the ACM, 16}(6), 372–378.
+#' doi:10.1145/362248.362272
 #' @examples
 #' df <- filterGraph(phyActFlowPropensity[,c(paste0('pa',1:2),'predict')])
 #' head(df)
