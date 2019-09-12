@@ -20,6 +20,8 @@
 #' normalizeData(df)
 #' @export
 normalizeData <- function(df, ..., .palist=NULL, .sortRows=TRUE) {
+  if (length(list(...)) > 0) stop("Rejected are any values passed in the '...' argument")
+
   palist <- verifyIsData(df)
   if (!is.null(.palist)) {
     if (length(palist) != length(.palist)) {

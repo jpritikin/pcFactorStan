@@ -180,6 +180,7 @@ generateCovItems <- function(df, numItems, th=0.5, name, ..., scale=1, alpha=1) 
 #' df <- generateItem(df)
 #' @export
 generateItem <- function(df, theta, th=0.5, name, ..., scale=1, alpha=1) {
+  if (length(list(...)) > 0) stop("Rejected are any values passed in the '...' argument")
   if (!missing(theta) && is.matrix(theta)) {
     if (length(colnames(theta))) {
       if (!missing(name)) {
