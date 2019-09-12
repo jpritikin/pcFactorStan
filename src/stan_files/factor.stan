@@ -35,6 +35,7 @@ parameters {
   vector[NITEMS] rawUnique;      // do not interpret, see unique
 }
 transformed parameters {
+  vector[NITEMS] rawFactorProp;  // always positive
   vector[totalThresholds] cumTh;
   matrix[NPA,NITEMS] theta;
   for (pa in 1:NPA) {
@@ -47,16 +48,22 @@ transformed parameters {
     int to = TOFFSET[ix] + NTHRESH[ix] - 1;
     cumTh[from:to] = cumulative_sum(threshold[from:to]);
   }
+  for (fx in 1:NITEMS) {
+    real resid = variance(rawUniqueTheta[,fx] * rawUnique[fx]);
+    real pred = variance(rawFactor * rawLoadings[fx]);
+    rawFactorProp[fx] = 0.5 + pred / (2 * (pred + resid));
+  }
 }
 model {
+  vector[NITEMS] rawLogitProp;
   vector[max(NTHRESH)*2 + 1] prob;
   int probSize;
 
   threshold ~ normal(0, 2.0);
   target += NITEMS * normal_lpdf(rawFactor | 0, 1.0);
   for (ix in 1:NITEMS) {
-    rawLoadings[ix] ~ normal(0, 1);
-    rawUnique[ix] ~ normal(1, 1);
+    rawLoadings[ix] ~ normal(0, 2.0);
+    rawUnique[ix] ~ normal(0, 2.0);
   }
   for (pa in 1:NPA) {
     rawUniqueTheta[pa,] ~ normal(0, 1.0);
@@ -77,11 +84,15 @@ model {
       target += weight[cmp] * categorical_lpmf(rcat[cmp] | prob[:probSize]);
     }
   }
+  for (fx in 1:NITEMS) {
+    rawLogitProp[fx] = logit(rawFactorProp[fx]);
+  }
+  target += normal_lpdf(rawLogitProp | 0, 0.5);
 }
 generated quantities {
+  vector[NITEMS] factorProp = rawFactorProp;
   vector[NITEMS] sigma;
   vector[NITEMS] factorLoadings = rawLoadings;
-  vector[NITEMS] factorProp;
   vector[NPA] factor = rawFactor;
   row_vector[NITEMS] unique = rawUnique';
   matrix[NPA,NITEMS] uniqueTheta = rawUniqueTheta;
@@ -98,10 +109,6 @@ generated quantities {
     factor = -factor;
   }
   for (fx in 1:NITEMS) {
-    // https://www.tandfonline.com/doi/full/10.1080/00031305.2018.1549100
-    real resid = variance(rawUniqueTheta[,fx] * rawUnique[fx]);
-    real pred = variance(rawFactor * rawLoadings[fx]);
-    factorProp[fx] = pred / (pred + resid);
     if (factorLoadings[fx] < 0) factorProp[fx] = -factorProp[fx];
   }
 }
