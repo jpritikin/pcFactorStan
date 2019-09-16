@@ -59,15 +59,22 @@ assertNameUnused <- function(df, name) {
 #' variance in the per-board game rankings.
 #'
 #' @template detail-response
+#' 
+#' @details The function \code{generateFactorItems} was renamed to
+#'   \code{generateSingleFactorItems} to make space for a more
+#'   flexible factor model with an arbitrary number of factors and
+#'   arbitrary factor to item loading pattern. If you don't need this
+#'   flexibility, you can just call the old function \code{generateSingleFactorItems}.
+#' 
 #' @template ref-masters1982
 #' @template ref-silver2018
 #' @family item generators
 #' @examples
 #' df <- twoLevelGraph(letters[1:10], 100)
-#' df <- generateFactorItems(df, 3)
+#' df <- generateSingleFactorItems(df, 3)
 #' @export
 #' @importFrom stats rnorm sd rbinom rbeta
-generateFactorItems <- function(df, prop, th=0.5, name, ..., scale=1, alpha=1) {
+generateSingleFactorItems <- function(df, prop, th=0.5, name, ..., scale=1, alpha=1) {
   palist <- verifyIsData(df)
   if (length(prop) == 1) {
     if (prop < 3) stop(paste0("At least 3 indicators are required (", prop," requested)"))

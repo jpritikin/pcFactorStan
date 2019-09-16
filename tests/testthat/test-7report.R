@@ -48,6 +48,7 @@ test_that("responseCurve", {
   expect_error(responseCurve(dl1, f2, letters[1:5]),
                "dl has 1 items but fit has 3 items")
 
+  dl2 <- prepSingleFactorModel(dl2, 0.2)
   dl2$alpha <- rnorm(dl2$NITEMS, .8, .1)
   f3 <- sampling(findModel("factor"), dl2, chains=1,
                  cores=0, iter=50, refresh=0)

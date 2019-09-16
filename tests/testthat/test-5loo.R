@@ -57,7 +57,7 @@ test_that("loo", {
   # this *sometimes* generates warnings about divergent transitions
   m1 <- pcStan("correlation_ll", dl, chains=4L, iter=1000L)
 
-  loo1 <- toLoo(m1, cores=1)
+  loo1 <- suppressWarnings(toLoo(m1, cores=1))
   ot <- outlierTable(dl, loo1)
   bad <- df[df$pa1==ot[1,'pa1'] & df$pa2==ot[1,'pa2'],]
   item <- as.character(ot[1,'item'])
@@ -68,9 +68,14 @@ test_that("loo", {
   expect_true(sign(bad[1, item]) !=
                 sign(bad[nrow(bad), item]))
 
+  dl <- prepSingleFactorModel(dl, 0.15)
   dl$alpha <- rep(1, dl$NITEMS)
-  m2 <- pcStan("factor_ll", dl, chains=4L, iter=1000L)
-  loo2 <- toLoo(m2, cores=1)
+  m2 <- pcStan("factor_ll", dl, chains=4L, iter=1000L,
+               include=FALSE,
+               pars=c('rawUnique', 'rawUniqueTheta', 'rawPerComponentVar',
+                      'rawFactor', 'rawLoadings', 'rawFactorProp', 'rawNegateFactor', 'rawSeenFactor',
+                      'unique', 'uniqueTheta'))
+  loo2 <- suppressWarnings(toLoo(m2, cores=1))
   ot <- outlierTable(dl, loo2)
   bad <- df[df$pa1==ot[1,'pa1'] & df$pa2==ot[1,'pa2'],]
   item <- as.character(ot[1,'item'])

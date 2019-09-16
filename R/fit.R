@@ -59,8 +59,7 @@ normalizeData <- function(df, ..., .palist=NULL, .sortRows=TRUE) {
 #'
 #' @template args-df
 #'
-#' @return a data list suitable for passing as the \code{data}
-#'   argument to \code{\link{pcStan}} or \code{\link[rstan]{stan}}
+#' @template return-datalist
 #' @family data preppers
 #' @examples
 #' df <- prepCleanData(phyActFlowPropensity)
@@ -144,8 +143,7 @@ prepCleanData <- function(df) {
 #' grouped together.  Within a vertex pair and item, responses
 #' are ordered from negative to positive.
 #'
-#' @return a data list suitable for passing as the \code{data}
-#'   argument to \code{\link{pcStan}} or \code{\link[rstan]{stan}}
+#' @template return-datalist
 #' @family data preppers
 #' @examples
 #' df <- prepData(phyActFlowPropensity)
@@ -193,6 +191,8 @@ verifyIsPreppedData <- function(data) {
 #' varCorrection constant. In general, a varCorrection of 2.0 or 3.0
 #' should provide optimal results.
 #'
+#' TODO discuss factor model
+#'
 #' @return An instance of S4 class \code{\link[rstan:stanmodel-class]{stanmodel}} that can be passed to \code{\link{pcStan}}.
 #' @seealso \code{\link{toLoo}}
 #' @template ref-vehtari2017
@@ -214,6 +214,113 @@ findModel <- function(model=NULL) {
   }
 
   obj
+}
+
+#' Specify a single factor model
+#'
+#' Specify a single latent factor with a path to each item.
+#'
+#' @param factorScalePrior standard deviation of the normal prior for the logit transformed factor proportion
+#' @template args-data
+#' @template return-datalist
+#' @examples
+#' dl <- prepData(phyActFlowPropensity)
+#' dl <- prepSingleFactorModel(dl, 0.9)
+#' str(dl)
+#' @family factor model
+#' @family data preppers
+#' @export
+prepSingleFactorModel <- function(data, factorScalePrior) {
+  verifyIsPreppedData(data)
+  data$factorScalePrior <- as.array(factorScalePrior)
+  ni <- data$NITEMS
+  data$factorItemPath <- matrix(c(rep(1,ni), 1:ni), nrow=2, byrow=TRUE)
+  data$NFACTORS <- 1L
+  data$NPATHS <- ni
+  data
+}
+
+#' Specify a factor model
+#'
+#' Specify a factor model with an arbitrary number of factors and
+#' arbitrary factor-to-item structure.
+#'
+#' @details
+#' For each factor, you need to specify its name, which items it predicts, and its scale prior.
+#' The connections from factors to items is specified by the `path` argument.
+#' The scale priors are given in the `factorScalePrior` argument.
+#' Both factors and items are specified by name (not index).
+#' The example shows how everything fits together.
+#' Paths are ordered as given in the `path` argument.
+#' 
+#' The units of `factorScalePrior` is a standard deviation of the
+#' normal prior for the logit transformed factor proportion.
+#'
+#' @param path a named list of item names
+#' @param factorScalePrior named numeric vector
+#' @template args-data
+#' @template return-datalist
+#' @examples
+#' pa <- phyActFlowPropensity[,setdiff(colnames(phyActFlowPropensity),
+#'                                     c('goal1','feedback1'))]
+#' dl <- prepData(pa)
+#' dl <- prepFactorModel(dl,
+#'                       list(flow=c('complex','skill','predict',
+#'                                   'creative', 'novelty', 'stakes',
+#'                                   'present', 'reward', 'chatter',
+#'                                   'body'),
+#'                            f2=c('waiting','control','evaluated','spont'),
+#'                            rc=c('novelty', 'waiting')),
+#'                       c(flow=0.9, f2=0.5, rc=0.2))
+#' str(dl)
+#' @family factor model
+#' @family data preppers
+#' @export
+prepFactorModel <- function(data, path, factorScalePrior) {
+  verifyIsPreppedData(data)
+  if (length(path) == 0) stop("No paths specified")
+  n1 <- names(path)
+  n2 <- names(factorScalePrior)
+  if (length(n1) == 0) {
+    stop("paths must be named, the name is the name of the factor")
+  }
+  if (length(n2) == 0) {
+    stop("factorScalePrior must be named, the name is the name of the factor")
+  }
+  if (length(n1) != length(n2)) {
+    stop(paste("Number of factors mismatch between path",
+               length(path),"and factorScalePrior",
+               length(factorScalePrior)))
+  }
+  if (!setequal(n1, n2)) {
+    stop("path and factorScalePrior specify different factor names")
+  }
+  itemsPerFactor <- sapply(path, length)
+  if (any(itemsPerFactor < 2)) {
+    stop(paste("Some factors have less than 2 indicators:",
+               paste(names(itemsPerFactor)[itemsPerFactor<2],
+                     collapse=", ")))
+  }
+  items <- data$nameInfo$item
+  indicators <- Reduce(union, path, c())
+  noItem <- is.na(match(indicators, items))
+  if (any(noItem)) {
+    stop(paste("No matching item for factor indicator(s):",
+               paste(indicators[noItem], collapse=", ")))
+  }
+  noIndicator <- is.na(match(items, indicators))
+  if (any(noIndicator)) {
+    stop(paste("No factor predicts item(s):",
+               paste(items[noIndicator], collapse=", ")))
+  }
+  data$factorScalePrior <- as.array(unname(factorScalePrior[n1]))
+  data$factorItemPath <- matrix(c(rep(1:length(itemsPerFactor), itemsPerFactor),
+                                  unlist(lapply(path, function(x) match(x, items)))),
+                                nrow=2, byrow=TRUE)
+  data$NFACTORS <- length(factorScalePrior)
+  data$NPATHS <- sum(itemsPerFactor)
+  data$nameInfo[['factor']] <- names(path)
+  data
 }
 
 #' Fit a paired comparison Stan model

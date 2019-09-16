@@ -29,10 +29,15 @@ test_that("factor", {
 
   numItems <- 4
   df <- twoLevelGraph(letters[1:10], 300)
-  df <- generateFactorItems(df, numItems)
+  df <- generateSingleFactorItems(df, numItems)
   dl <- prepData(df)
   dl$scale <- rep(1, numItems)
   dl$alpha <- rnorm(numItems, .8, .15)
-  fit <- pcStan("factor", dl, iter=100, chains=1)
+  dl <- prepSingleFactorModel(dl, 0.2)
+  fit <- suppressWarnings(pcStan("factor", dl, iter=100, chains=1,
+                include=FALSE,
+                pars=c('rawUnique', 'rawUniqueTheta', 'rawPerComponentVar',
+                       'rawFactor', 'rawLoadings', 'rawFactorProp', 'rawNegateFactor', 'rawSeenFactor',
+                       'unique', 'uniqueTheta')))
   itemModelExplorer(dl, fit, "i3")
 })

@@ -12,6 +12,10 @@ data {
   int<lower=1> TOFFSET[NITEMS];
   vector[NITEMS] scale;
   vector[NITEMS] alpha;
+  int<lower=1> NFACTORS;
+  real factorScalePrior[NFACTORS];
+  int<lower=1> NPATHS;
+  int factorItemPath[2,NPATHS];  // 1 is factor index, 2 is item index
   // response data
   int<lower=1, upper=NPA> pa1[NCMP];        // PA1 for observation N
   int<lower=1, upper=NPA> pa2[NCMP];        // PA2 for observation N
@@ -23,29 +27,69 @@ data {
 transformed data {
   int totalThresholds = sum(NTHRESH);
   int rcat[NCMP];
+  vector[NPATHS] pathScalePrior;
+  int itemsPerFactor[NFACTORS];
   for (cmp in 1:NCMP) {
     rcat[cmp] = pick[cmp] + NTHRESH[item[cmp]] + 1;
+  }
+  for (fx in 1:NFACTORS) itemsPerFactor[fx] = 0;
+  for (px in 1:NPATHS) {
+    int fx = factorItemPath[1,px];
+    int ix = factorItemPath[2,px];
+    if (fx < 1 || fx > NFACTORS) {
+      reject("factorItemPath[1,","px","] names factor ", fx, " (NFACTORS=",NFACTORS,")");
+    }
+    if (ix < 1 || ix > NITEMS) {
+      reject("factorItemPath[2,","px","] names item ", ix, " (NITEMS=",NITEMS,")");
+    }
+    itemsPerFactor[fx] += 1;
+    pathScalePrior[px] = factorScalePrior[fx];
   }
 }
 parameters {
   vector[totalThresholds] threshold;
+  matrix[NPA,NFACTORS] rawFactor;      // do not interpret, see factor
+  vector[NPATHS] rawLoadings; // do not interpret, see factorLoadings
   matrix[NPA,NITEMS] rawUniqueTheta; // do not interpret, see uniqueTheta
-  vector[NPA] rawFactor;      // do not interpret, see factor
-  vector[NITEMS] rawLoadings; // do not interpret, see factorLoadings
   vector[NITEMS] rawUnique;      // do not interpret, see unique
 }
 transformed parameters {
   vector[totalThresholds] cumTh;
   matrix[NPA,NITEMS] theta;
-  for (pa in 1:NPA) {
-    // theta must be normal(0,1) distributed
-    theta[pa,] = ((rawFactor[pa] * rawLoadings)' +
-                  rawUniqueTheta[pa,] .* rawUnique');
-  }
+  vector[NPATHS] rawPathProp;  // always positive
+  real rawPerComponentVar[NITEMS,1+NFACTORS];
   for (ix in 1:NITEMS) {
     int from = TOFFSET[ix];
     int to = TOFFSET[ix] + NTHRESH[ix] - 1;
     cumTh[from:to] = cumulative_sum(threshold[from:to]);
+  }
+  for (ix in 1:NITEMS) {
+    theta[,ix] = rawUniqueTheta[,ix] * rawUnique[ix];
+    rawPerComponentVar[ix, 1] = variance(theta[,ix]);
+  }
+  for (fx in 1:NFACTORS) {
+    for (ix in 1:NITEMS) rawPerComponentVar[ix,1+fx] = 0;
+  }
+  for (px in 1:NPATHS) {
+    int fx = factorItemPath[1,px];
+    int ix = factorItemPath[2,px];
+    vector[NPA] theta1 = rawLoadings[px] * rawFactor[,fx];
+    rawPerComponentVar[ix,1+fx] = variance(theta1);
+    theta[,ix] += theta1;
+  }
+  for (px in 1:NPATHS) {
+    int fx = factorItemPath[1,px];
+    int ix = factorItemPath[2,px];
+    real resid = 0;
+    real pred;
+    for (cx in 1:(1+NFACTORS)) {
+      if (cx == fx+1) {
+        pred = rawPerComponentVar[ix,cx];
+      } else {
+        resid += rawPerComponentVar[ix,cx];
+      }
+    }
+    rawPathProp[px] = pred / (pred + resid);
   }
 }
 model {
@@ -53,13 +97,13 @@ model {
   int probSize;
 
   threshold ~ normal(0, 2.0);
-  target += NITEMS * normal_lpdf(rawFactor | 0, 1.0);
-  for (ix in 1:NITEMS) {
-    rawLoadings[ix] ~ normal(0, 1);
-    rawUnique[ix] ~ normal(1, 1);
+  rawLoadings ~ normal(0, 2.0);
+  for (fx in 1:NFACTORS) {
+    target += itemsPerFactor[fx] * normal_lpdf(rawFactor[,fx] | 0, 1.0);
   }
-  for (pa in 1:NPA) {
-    rawUniqueTheta[pa,] ~ normal(0, 1.0);
+  rawUnique ~ normal(0, 2.0);
+  for (ix in 1:NITEMS) {
+    rawUniqueTheta[,ix] ~ normal(0, 1.0);
   }
   for (cmp in 1:NCMP) {
     if (refresh[cmp]) {
@@ -77,6 +121,7 @@ model {
       target += weight[cmp] * categorical_lpmf(rcat[cmp] | prob[:probSize]);
     }
   }
+  target += normal_lpdf(logit(0.5 + rawPathProp/2.0) | 0, pathScalePrior);
 }
 generated quantities {
   vector[max(NTHRESH)*2 + 1] prob;
@@ -84,12 +129,14 @@ generated quantities {
   vector[N] log_lik;
   int cur = 1;
 
+  vector[NPATHS] pathProp = rawPathProp;
   vector[NITEMS] sigma;
-  vector[NITEMS] factorLoadings = rawLoadings;
-  vector[NITEMS] factorProp;
-  vector[NPA] factor = rawFactor;
+  vector[NPATHS] pathLoadings = rawLoadings;
+  matrix[NPA,NFACTORS] factor = rawFactor;
   row_vector[NITEMS] unique = rawUnique';
   matrix[NPA,NITEMS] uniqueTheta = rawUniqueTheta;
+  int rawSeenFactor[NFACTORS];
+  int rawNegateFactor[NFACTORS];
 
   for (fx in 1:NITEMS) {
     sigma[fx] = sd(theta[,fx]);
@@ -98,16 +145,24 @@ generated quantities {
       uniqueTheta[,fx] = -uniqueTheta[,fx];
     }
   }
-  if (factorLoadings[1] < 0) {
-    factorLoadings = -factorLoadings;
-    factor = -factor;
+  for (fx in 1:NFACTORS) rawSeenFactor[fx] = 0;
+  for (px in 1:NPATHS) {
+    int fx = factorItemPath[1,px];
+    int ix = factorItemPath[2,px];
+    if (rawSeenFactor[fx] == 0) {
+      rawSeenFactor[fx] = 1;
+      rawNegateFactor[fx] = rawLoadings[px] < 0;
+    }
+    if (rawNegateFactor[fx]) {
+      pathLoadings[px] = -pathLoadings[px];
+    }
   }
-  for (fx in 1:NITEMS) {
-    // https://www.tandfonline.com/doi/full/10.1080/00031305.2018.1549100
-    real resid = variance(rawUniqueTheta[,fx] * rawUnique[fx]);
-    real pred = variance(rawFactor * rawLoadings[fx]);
-    factorProp[fx] = pred / (pred + resid);
-    if (factorLoadings[fx] < 0) factorProp[fx] = -factorProp[fx];
+  for (fx in 1:NFACTORS) {
+    if (!rawNegateFactor[fx]) continue;
+    factor[,fx] = -factor[,fx];
+  }
+  for (fx in 1:NPATHS) {
+    if (pathLoadings[fx] < 0) pathProp[fx] = -pathProp[fx];
   }
 
   for (cmp in 1:NCMP) {

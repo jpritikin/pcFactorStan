@@ -64,10 +64,12 @@ fit 'unidim_adapt' to each item separately.
 ## Physical activity flow propensity
 
 The R code below first loads **rstan** and **pcFactorStan**.
+For extra diagnostics, we also load **loo**.
 
 ```{r, message=FALSE}
 library(rstan)
 library(pcFactorStan)
+library(loo)
 ```
 
 Next we take a peek at the data.
@@ -311,11 +313,31 @@ the data seen by Stan so we can map back from the model
 to the data. Hence, we update `pafp` using the usual the data cleaning sequence
 of `filterGraph` and `normalizeData` and pass the result to `prepCleanData`.
 
+Up until version 1.0.2, only a single factor model was available. As
+of 1.0.3, the factor model supports an arbitrary number of factors and
+arbitrary factor-to-item structure. In this example, we will
+keep with the simplest factor model, a single factor that predicts all items.
+We need to set a prior on the factor loadings. The prior is given as the standard
+deviation of the normal prior for the logit transformed factor proportion.
+Here's an example:
+
+```{r}
+factorProportion <- .3
+factorScalePrior <- .9
+dnorm(qlogis(0.5 + factorProportion/2), sd=factorScalePrior)
+```
+
+Enough data are available that we can use a factor scale prior of
+1.0. If the model exhibited sampling difficulties (i.e. divergences)
+then a smaller prior could help by constraining the factor proportion
+closer to zero.
+
 ```{r factorData1, cache=TRUE}
-pafp <- pafp[,c(paste0('pa',1:2), 
+pafp <- pafp[,c(paste0('pa',1:2),
              setdiff(covItemNames, c('spont','control','evaluated','waiting')))]
 pafp <- normalizeData(filterGraph(pafp))
 dl <- prepCleanData(pafp)
+dl <- prepSingleFactorModel(dl, 1.0)
 dl$scale <- result[match(dl$nameInfo$item, result$item), 'scale']
 dl$alpha <- alpha[match(dl$nameInfo$item, rownames(alpha)), 'mean']
 ```
@@ -324,23 +346,21 @@ rm(fit2)  # free up some memory
 ```
 
 ```{r factor, message=FALSE, results='hide', cache=TRUE}
-fit3 <- pcStan("factor_ll", data=dl, include=FALSE, iter=3000,
-               pars=c('rawUnique', 'rawUniqueTheta', 'rawFactor', 'rawLoadings'))
+fit3 <- pcStan("factor_ll", data=dl, include=FALSE, 
+               pars=c('rawUnique', 'rawUniqueTheta', 'rawPerComponentVar',
+	       'rawFactor', 'rawLoadings', 'rawFactorProp', 'rawNegateFactor', 'rawSeenFactor',
+	       'unique', 'uniqueTheta'))
 ```
 
 To check the fit diagnostics, we have to take care to
 examine only the parameters of interest. The factor model outputs
 many parameters that should not be interpreted. For example, we do not
-care about `log_lik` because this vector contains per-observation
-likelihoods for **loo**.
-We also ignore `theta` because it is a function
-of the other parameters.
+care about `unique` or `uniqueTheta`, the unique scores.
 
 ```{r factorDiag1, cache=TRUE}
-check_hmc_diagnostics(fit3) 
+check_hmc_diagnostics(fit3)
 
-interest <- c("threshold", "factorLoadings",  "factorProp", "factor",
- "unique", "uniqueTheta", "lp__")
+interest <- c("threshold", "pathProp", "factor", "lp__", "log_lik")
 
 allPars <- summary(fit3, pars=interest)$summary
 print(min(allPars[,'n_eff']))
@@ -348,12 +368,34 @@ print(max(allPars[,'Rhat']))
 ```
 
 Looks good! Let us see which data are the most unexpected by the model.
-We create a `loo` object and pass that to `outlierTable`.
+We create a `loo` object and inspect the summary output.
 
 ```{r factorLoo, cache=TRUE}
-options(mc.cores=1)  # otherwise loo consumes too much RAM 
+options(mc.cores=1)  # otherwise loo consumes too much RAM
+kThreshold <- 0.4
 l1 <- toLoo(fit3) 
-kThreshold <- 0.3
+print(l1)
+```
+
+```{r results='hide', echo=FALSE}
+if (sum(pareto_k_values(l1)>.5) == 0) stop("No outliers?!")
+```
+
+The first thing to check is whether the minimum `n_eff` for the Pareto
+$k$ is greater than 100 times the number of chains. It is. Next, we look at
+`p_loo`, the effective number of parameters. In well behaving cases,
+`p_loo` is less than the sample size and the number of parameters.
+This also looks good. There are `r dl$NITEMS * dl$NPA` parameters
+just for the unique scores.
+
+**loo** identified `r sum(pareto_k_values(l1)>.5)` observations with a
+Pareto $k>0.5$.
+These observations can be regarded as outliers.
+To find out the details, we pass the `loo` object to `outlierTable`.
+We use a threshold of `r kThreshold` instead of 0.5 to ensure
+that ample lines are shown.
+
+```{r}
 ot <- outlierTable(dl, l1, kThreshold)
 ```
 ```{r, results='hide'}
@@ -363,14 +405,8 @@ print(ot)
 kable(ot, row.names=TRUE)
 ```
 
-Observations with $k>0.5$ can be regarded as outliers.
-Due to Monte Carlo error,
-every sampling run may identify outliers in a slightly different order.
-We use a threshold of `r kThreshold` instead of 0.5 to ensure
-that ample lines are shown.
-
 ```{r}
-xx <- which(ot[,'pa1'] == 'tennis' & ot[,'pa2'] == 'water skiing' & ot[,'item'] == 'predict' & ot[,'pick'] == -2)
+xx <- which(ot[,'pa1'] == 'calisthenics' & ot[,'pa2'] == 'sex' & ot[,'item'] == 'body' & ot[,'pick'] == -2)
 ```
 
 We will take a closer look at row `r xx`.
@@ -382,7 +418,7 @@ Looking back at our item response curve plot,
 the legend gives the response category order from top (1) to bottom (5).
 The first response category is _much more_.
 Putting it all together we obtain an endorsement of
-_`r ot[xx,'pa1']` is much more predictable than `r ot[xx,'pa2']`_.
+_`r ot[xx,'pa1']` involves much more of my body than `r ot[xx,'pa2']`_.
 Specifically what about that assertion is unexpected?
 We can examine how other participants have responded,
 
@@ -396,7 +432,7 @@ Let us look a little deeper to understand why this response
 was unexpected.
 
 ```{r outlier, cache=TRUE}
-loc <- sapply(ot[xx,c('pa1','pa2','item')], unfactor)
+loc <- sapply(ot[xx,c('pa1','pa2','item')], unfactor) 
 exam <- summary(fit3, pars=paste0("theta[",loc[paste0('pa',1:2)],
                           ",", loc['item'],"]"))$summary
 ```
@@ -406,8 +442,8 @@ kable(exam)
 ```
 
 Here we find that, based on comparisons with other activities,
-`r ot[xx,'pa2']` was estimated about `r exam[2,'mean'] - exam[1,'mean']` units more predictable
-than `r ot[xx,'pa1']`. However, note the wide posterior quantiles!
+`r ot[xx,'pa2']` was estimated to involve `r exam[2,'mean'] - exam[1,'mean']` units more of
+the body than `r ot[xx,'pa1']`. However, note the wide posterior quantiles!
 What are the sample sizes associated with these activities?
 
 ```{r}
@@ -415,16 +451,16 @@ sum(c(pafp$pa1 == ot[xx,'pa1'], pafp$pa2 == ot[xx,'pa1']))
 sum(c(pafp$pa1 == ot[xx,'pa2'], pafp$pa2 == ot[xx,'pa2']))
 ```
 
-Ah, no wonder, predictability's 95% uncertainty interval for `r ot[xx,'pa2']`
+Ah, no wonder, the body involvement 95% uncertainty interval for `r ot[xx,'pa2']`
 is from `r exam[2,'2.5%']` to `r exam[2,'97.5%']`.
 So there is practically no information.
 We could continue our investigation by looking at which
-responses justified these _predict_ estimates.
+responses justified these _body_ estimates.
 However, let us move on and
 plot the marginal posterior distributions of the factor proportions,
 
-```{r factorProp, cache=TRUE}
-pi <- parInterval(fit3, 'factorProp', dl$nameInfo$item, label='item')
+```{r pathProp, cache=TRUE}
+pi <- parInterval(fit3, 'pathProp', dl$nameInfo$item, label='item')
 pi <- pi[order(abs(pi$M)),]
 pi$item <- factor(pi$item, levels=pi$item)
 
@@ -445,8 +481,8 @@ look at the per-activity factor scores, we can limit ourselves to
 activities with a sample size of at least 11.
 
 ```{r activities, cache=TRUE}
-pa11 <- levels(filterGraph(pafp, minDifferent=11L)$pa1)
-pick <- paste0('factor[',match(pa11, dl$nameInfo$pa),']')
+pa11 <- levels(filterGraph(pafp, minDifferent=11L)$pa1) 
+pick <- paste0('factor[',match(pa11, dl$nameInfo$pa),',1]')
 pi <- parInterval(fit3, pick, pa11, label='activity')
 pi <- pi[order(pi$M),]
 pi$activity <- factor(pi$activity, levels=pi$activity)
@@ -522,21 +558,30 @@ Exclude `rawTheta` and `rawThetaCorChol` from sampling reports.
 | parameter      | prior               | purpose                              |
 |----------------|---------------------|--------------------------------------|
 | threshold      | normal(0,2)         | item response thresholds             |
-| unique         | normal(1,1)         | scale of unique scores               |
+| unique         | normal(0,2)         | scale of unique scores               |
 | uniqueTheta    | normal(0,1)         | unique scores                        |
-| factorLoadings | normal(0,1)         | signed scale of factor scores        |
+| factorLoadings | normal(0,2)         | signed scale of factor scores        |
 | factor         | normal(0,1)         | factor scores                        |
-| factorProp     | N/A                 | signed factor variance proportion    |
+| pathProp       | _see below_         | signed factor variance proportion    |
 | sigma          | N/A                 | relative item scale                  |
 
 Thresholds for all items are combined into a single vector.
-`factorProp` is computed using Equation 3 of Gelman et al. (in press)
-and has no prior of its own.
-`factorLoadings` is in standard deviation units but can be negative.
-Similarly, `factorProp` is a signed proportion bounded between -1 and 1.
-Exclude `rawUnique`, `rawUniqueTheta`, `rawFactor`, and `rawLoadings` from sampling.
+`pathProp` is computed based on Equation 3 of Gelman et al. (in press).
+The prior on `pathProp` is `normal(logit(0.5 + pathProp/2), pathScalePrior)`
+where `pathScalePrior` is provided as data (see `prepSingleFactorModel()`).
+The idea of putting a prior on `pathProp` was inspired by Gelman (2019, Aug 23).
+The `unique` and `factorLoadings` parameters are only relatively interpretable because
+the scale is arbitrary.
+The most interpretable parameter is `pathProp`.
+`pathProp` is a signed proportion bounded between -1 and 1.
+Exclude `rawUnique`, `rawUniqueTheta`, `rawFactor`, `rawLoadings`, `rawPerComponentVar`,
+`rawPathProp`, `rawNegateFactor`, and `rawSeenFactor` from sampling.
+You may also like to exclude `unique` and `uniqueTheta` unless you have
+some special interest in the unique scores.
 
 # References
+
+Gelman, A. (2019, Aug 23). Yes, you can include prior information on quantities of interest, not just on parameters in your model [Blog post]. Retrieved from [https://statmodeling.stat.columbia.edu/2019/08/23/yes-you-can-include-prior-information-on-quantities-of-interest-not-just-on-parameters-in-your-model/](https://statmodeling.stat.columbia.edu/2019/08/23/yes-you-can-include-prior-information-on-quantities-of-interest-not-just-on-parameters-in-your-model/).
 
 Gelman, A., Goodrich, B., Gabry, J., & Vehtari, A. (in press). R-squared for Bayesian regression models. _The American Statistician._ DOI: 10.1080/00031305.2018.1549100
 

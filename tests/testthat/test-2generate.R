@@ -54,10 +54,10 @@ test_that("generateCovItems", {
                "Colname i4 is already taken.")
 })
 
-test_that("generateFactorItems", {
+test_that("generateSingleFactorItems", {
   set.seed(1)
   df <- twoLevelGraph(letters[1:10], 100)
-  df <- generateFactorItems(df, 3)
+  df <- generateSingleFactorItems(df, 3)
 
   # This is a nonsensical way to look at the data.
   # Just ensure that nothing has changed.
@@ -66,10 +66,10 @@ test_that("generateFactorItems", {
                c(0.624, 0.142, 0.009, 0.644, -0.221, 0.579),
                tolerance=1e-3, scale=1)
 
-  expect_error(generateFactorItems(df, 1),
+  expect_error(generateSingleFactorItems(df, 1),
                "At least 3 indicators are required")
-  expect_error(generateFactorItems(df, c(.3,.4)),
+  expect_error(generateSingleFactorItems(df, c(.3,.4)),
                "At least 3 indicators are required")
-  expect_error(generateFactorItems(df, c(1.3,.4,.4)),
+  expect_error(generateSingleFactorItems(df, c(1.3,.4,.4)),
                "Signed proportions must be between -1 and 1")
 })
