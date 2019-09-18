@@ -97,13 +97,13 @@ test_that("mixed thresholds", {
 
 test_that("calibrateItems", {
   pafp <- phyActFlowPropensity[,c(1,2,6:8)]
-  result <- calibrateItems(pafp, iter=1000L, seed=1)
+  result <- calibrateItems(pafp, iter=1000L, chains=2, seed=1)
   expect_equal(nrow(result), 3)
-  expect_true(all(result[1:2,'n_eff'] > 400))
+  expect_true(all(result[1:2,'n_eff'] > 200))
   expect_true(all(result[1:2,'Rhat'] < 1.015))
   expect_true(result[3,'low_bfmi'] > 0 ||
                 result[3,'divergent'] > 0)
-  expect_true(result[3,'n_eff'] < 400)
+  expect_true(result[3,'n_eff'] < 200)
   expect_equal(result[1:2,'scale'], c(.469, .535),
                tolerance=.01, scale=1)
 })
