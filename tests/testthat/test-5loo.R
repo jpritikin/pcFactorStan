@@ -2,7 +2,7 @@ library(testthat)
 context("test-5loo")
 
 skip_on_cran()
-options(mc.cores=4)
+options(mc.cores=2)
 
 suppressWarnings(RNGversion("3.6"))
 library(rstan)  # for get_logposterior
@@ -21,7 +21,7 @@ test_that("loo univariate", {
   df <- normalizeData(df)
   dl <- prepCleanData(df)
   dl$scale <- 1.5
-  m1 <- pcStan("unidim_ll", dl, chains=4L, iter=600)
+  m1 <- suppressWarnings(pcStan("unidim_ll", dl, chains=2L, iter=300))
 
   loo1 <- toLoo(m1, cores=1)
   expect_error(outlierTable(df, loo1),
@@ -55,7 +55,7 @@ test_that("loo", {
   dl$scale <- rep(1.5, dl$NITEMS)
 
   # this *sometimes* generates warnings about divergent transitions
-  m1 <- pcStan("correlation_ll", dl, chains=4L, iter=1000L)
+  m1 <- suppressWarnings(pcStan("correlation_ll", dl, chains=2L, iter=250L))
 
   loo1 <- suppressWarnings(toLoo(m1, cores=1))
   ot <- outlierTable(dl, loo1)
@@ -70,11 +70,11 @@ test_that("loo", {
 
   dl <- prepSingleFactorModel(dl, 0.15)
   dl$alpha <- rep(1, dl$NITEMS)
-  m2 <- pcStan("factor_ll", dl, chains=4L, iter=1000L,
+  m2 <- suppressWarnings(pcStan("factor_ll", dl, chains=2L, iter=300L,
                include=FALSE,
                pars=c('rawUnique', 'rawUniqueTheta', 'rawPerComponentVar',
                       'rawFactor', 'rawLoadings', 'rawFactorProp', 'rawNegateFactor', 'rawSeenFactor',
-                      'unique', 'uniqueTheta'))
+                      'unique', 'uniqueTheta')))
   loo2 <- suppressWarnings(toLoo(m2, cores=1))
   ot <- outlierTable(dl, loo2)
   bad <- df[df$pa1==ot[1,'pa1'] & df$pa2==ot[1,'pa2'],]
