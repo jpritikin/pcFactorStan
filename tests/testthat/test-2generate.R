@@ -7,6 +7,8 @@ suppressWarnings(RNGversion("3.5"))
 test_that("generateItem", {
   set.seed(1)
   df <- roundRobinGraph(letters[1:5], 40)
+  expect_error(generateItem(df, bob="whatever"),
+               "Rejected are any values passed")
   df <- generateItem(df)
   expect_equivalent(c(table(df$i1)), c(7,17,16))
 

@@ -7,6 +7,8 @@ test_that("normalizeData", {
   df <- data.frame(pa1=NA, pa2=NA, i1=c(1, -1), i2=c(-2, 2))
   df[1,paste0('pa',1:2)] <- c('a','b')
   df[2,paste0('pa',1:2)] <- c('b','a')
+  expect_error(normalizeData(df, bob="whatever"),
+               "Rejected are any values passed")
   df <- normalizeData(df)
   expect_equal(df$pa1, c('a','a'))
   expect_equal(df$i1, c(1,1))
@@ -65,6 +67,8 @@ test_that("prepFactorModel", {
   pa <- phyActFlowPropensity[,setdiff(colnames(phyActFlowPropensity),
                                       c('goal1','feedback1'))]
   dl <- prepData(pa)
+  expect_error(prepFactorModel(dl, list(), c()),
+               "No paths specified")
   expect_error(prepFactorModel(dl,
                         list(c('complex','skill','predict',
                                     'creative', 'novelty', 'stakes',
