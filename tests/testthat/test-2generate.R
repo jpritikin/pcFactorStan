@@ -75,3 +75,23 @@ test_that("generateSingleFactorItems", {
   expect_error(generateSingleFactorItems(df, c(1.3,.4,.4)),
                "Signed proportions must be between -1 and 1")
 })
+
+test_that("generateFactorItems", {
+  set.seed(1)
+  df <- twoLevelGraph(letters[1:10], 100)
+  df <- generateFactorItems(df, list(f1=paste0('i',1:4),
+                                     f2=paste0('i',2:4)),
+                            c(f1=0.9, f2=0.5))
+  # This is a nonsensical way to look at the data.
+  # Just ensure that nothing has changed.
+  c1 <- cov(df[,paste0('i',1:4)])
+  expect_equal(c1[lower.tri(c1, diag = TRUE)],
+               c(0.657, -0.031, -0.055, -0.042, 0.652, 0.073, 0.043,
+                 0.602,  -0.021, 0.563),
+               tolerance=1e-3, scale=1)
+
+  expect_error(generateFactorItems(df, list(f1=paste0('i',1:4),
+                                     f2=paste0('i',2:4)),
+                            c(f1=100, f2=100)),
+               "factorScalePrior is too large")
+})

@@ -191,7 +191,11 @@ verifyIsPreppedData <- function(data) {
 #' varCorrection constant. In general, a varCorrection of 2.0 or 3.0
 #' should provide optimal results.
 #'
-#' TODO discuss factor model
+#' After version 1.0.2, the factor model permits an arbitrary number
+#' of factors and arbitrary factor-to-item paths. If you were using
+#' the old factor model, you'll need to update your code to call
+#' \link{prepSingleFactorModel}. Arbitrary factor model structure
+#' should be specified using \link{prepFactorModel}.
 #'
 #' @return An instance of S4 class \code{\link[rstan:stanmodel-class]{stanmodel}} that can be passed to \code{\link{pcStan}}.
 #' @seealso \code{\link{toLoo}}
@@ -245,19 +249,9 @@ prepSingleFactorModel <- function(data, factorScalePrior) {
 #' Specify a factor model with an arbitrary number of factors and
 #' arbitrary factor-to-item structure.
 #'
-#' @details
-#' For each factor, you need to specify its name, which items it predicts, and its scale prior.
-#' The connections from factors to items is specified by the `path` argument.
-#' The scale priors are given in the `factorScalePrior` argument.
-#' Both factors and items are specified by name (not index).
-#' The example shows how everything fits together.
-#' Paths are ordered as given in the `path` argument.
-#' 
-#' The units of `factorScalePrior` is a standard deviation of the
-#' normal prior for the logit transformed factor proportion.
-#'
-#' @param path a named list of item names
-#' @param factorScalePrior named numeric vector
+#' @template detail-factorspec
+#' @template args-path
+#' @template args-factorScalePrior
 #' @template args-data
 #' @template return-datalist
 #' @examples
@@ -275,45 +269,14 @@ prepSingleFactorModel <- function(data, factorScalePrior) {
 #' str(dl)
 #' @family factor model
 #' @family data preppers
+#' @seealso To simulate data from a factor model: \link{generateFactorItems}
 #' @export
 prepFactorModel <- function(data, path, factorScalePrior) {
   verifyIsPreppedData(data)
-  if (length(path) == 0) stop("No paths specified")
-  n1 <- names(path)
-  n2 <- names(factorScalePrior)
-  if (length(n1) == 0) {
-    stop("paths must be named, the name is the name of the factor")
-  }
-  if (length(n2) == 0) {
-    stop("factorScalePrior must be named, the name is the name of the factor")
-  }
-  if (length(n1) != length(n2)) {
-    stop(paste("Number of factors mismatch between path",
-               length(path),"and factorScalePrior",
-               length(factorScalePrior)))
-  }
-  if (!setequal(n1, n2)) {
-    stop("path and factorScalePrior specify different factor names")
-  }
-  itemsPerFactor <- sapply(path, length)
-  if (any(itemsPerFactor < 2)) {
-    stop(paste("Some factors have less than 2 indicators:",
-               paste(names(itemsPerFactor)[itemsPerFactor<2],
-                     collapse=", ")))
-  }
   items <- data$nameInfo$item
-  indicators <- Reduce(union, path, c())
-  noItem <- is.na(match(indicators, items))
-  if (any(noItem)) {
-    stop(paste("No matching item for factor indicator(s):",
-               paste(indicators[noItem], collapse=", ")))
-  }
-  noIndicator <- is.na(match(items, indicators))
-  if (any(noIndicator)) {
-    stop(paste("No factor predicts item(s):",
-               paste(items[noIndicator], collapse=", ")))
-  }
-  data$factorScalePrior <- as.array(unname(factorScalePrior[n1]))
+  validateFactorModel(items, path, factorScalePrior)
+  itemsPerFactor <- sapply(path, length)
+  data$factorScalePrior <- as.array(unname(factorScalePrior[names(path)]))
   data$factorItemPath <- matrix(c(rep(1:length(itemsPerFactor), itemsPerFactor),
                                   unlist(lapply(path, function(x) match(x, items)))),
                                 nrow=2, byrow=TRUE)
