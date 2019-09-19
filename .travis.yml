@@ -24,6 +24,7 @@ before_install:
 
 install:
 - ./tools/travis/install-$TRAVIS_OS_NAME
+- echo "library(devtools); devtools::install_github('jpritikin/covr')" | R --vanilla
 
 before_script:
 - export _R_CHECK_FORCE_SUGGESTS_=false
@@ -35,7 +36,7 @@ script:
     travis_wait 59 R CMD check --ignore-vignettes pcFactorStan*tar.gz
 
 after_success:
-  - travis_wait 40 Rscript -e 'covr::codecov()'
+  - travis_wait 40 Rscript ./tools/covr.R
 
 after_failure:
   - cat pcFactorStan.Rcheck/00*

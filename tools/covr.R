@@ -1,0 +1,6 @@
+library(covr)
+options(digits=15)
+c1 <- covr::package_coverage(type=c("tests"), quiet=FALSE, pre_clean=FALSE)
+pct <- percent_coverage(c1, by="line")
+print(pct)
+covr::codecov(coverage = c1)
