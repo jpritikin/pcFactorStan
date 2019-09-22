@@ -191,7 +191,7 @@ verifyIsPreppedData <- function(data) {
 #' varCorrection constant. In general, a varCorrection of 2.0 or 3.0
 #' should provide optimal results.
 #'
-#' After version 1.0.2, the factor model permits an arbitrary number
+#' Since version 1.1.0, the factor model permits an arbitrary number
 #' of factors and arbitrary factor-to-item paths. If you were using
 #' the old factor model, you'll need to update your code to call
 #' \link{prepSingleFactorModel}. Arbitrary factor model structure

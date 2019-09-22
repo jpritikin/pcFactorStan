@@ -314,7 +314,7 @@ to the data. Hence, we update `pafp` using the usual the data cleaning sequence
 of `filterGraph` and `normalizeData` and pass the result to `prepCleanData`.
 
 Up until version 1.0.2, only a single factor model was available. As
-of 1.0.3, the factor model supports an arbitrary number of factors and
+of 1.1.0, the factor model supports an arbitrary number of factors and
 arbitrary factor-to-item structure. In this example, we will
 keep with the simplest factor model, a single factor that predicts all items.
 We need to set a prior on the factor loadings. The prior is given as the standard
