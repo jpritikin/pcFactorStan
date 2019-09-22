@@ -150,6 +150,7 @@ ssqrt <- function(v) sign(v)*sqrt(abs(v))
 #' @template args-factorScalePrior
 #' @inheritParams generateItem
 #' @description
+#' Generate paired comparison data given a mapping from factors to items.
 #'
 #' @template detail-factorspec
 #' 
@@ -310,8 +311,8 @@ generateCovItems <- function(df, numItems, th=0.5, name, ..., scale=1, alpha=1) 
 #' @param th a vector of thresholds
 #' @param name a vector of item names
 #' @template args-dots-barrier
-#' @param scale the scaling constant
-#' @param alpha item discrimination
+#' @param scale a vector of scaling constants
+#' @param alpha a vector of item discriminations
 #'
 #' @description
 #' To add a single item, \code{theta} should be a vector of latent
