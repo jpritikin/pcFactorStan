@@ -360,7 +360,7 @@ care about `unique` or `uniqueTheta`, the unique scores.
 ```{r factorDiag1, cache=TRUE}
 check_hmc_diagnostics(fit3)
 
-interest <- c("threshold", "pathProp", "factor", "lp__", "log_lik")
+interest <- c("threshold", "pathProp", "factor", "lp__")
 
 allPars <- summary(fit3, pars=interest)$summary
 print(min(allPars[,'n_eff']))
