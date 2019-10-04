@@ -34,7 +34,7 @@ test_that("factor", {
   dl$scale <- rep(1, numItems)
   dl$alpha <- rnorm(numItems, .8, .15)
   dl <- prepSingleFactorModel(dl, 0.2)
-  fit <- suppressWarnings(pcStan("factor", dl, iter=100, chains=1,
+  fit <- suppressWarnings(pcStan("factor1", dl, iter=100, chains=1,
                 include=FALSE,
                 pars=c('rawUnique', 'rawUniqueTheta', 'rawPerComponentVar',
                        'rawFactor', 'rawLoadings', 'rawFactorProp', 'rawNegateFactor', 'rawSeenFactor',

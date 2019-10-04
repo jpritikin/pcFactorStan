@@ -1,4 +1,5 @@
 library(testthat)
+library(pcFactorStan)
 context("test-5loo")
 
 skip_on_cran()
@@ -59,24 +60,6 @@ test_that("loo", {
 
   loo1 <- suppressWarnings(toLoo(m1, cores=1))
   ot <- outlierTable(dl, loo1)
-  bad <- df[df$pa1==ot[1,'pa1'] & df$pa2==ot[1,'pa2'],]
-  item <- as.character(ot[1,'item'])
-  expect_true(all(sign(bad[as.numeric(rownames(bad)) <= 300, item])
-                  == sign(bad[1, item])))
-  expect_true(all(sign(bad[as.numeric(rownames(bad)) > 300, item])
-                  == sign(bad[nrow(bad), item]), na.rm=TRUE))
-  expect_true(sign(bad[1, item]) !=
-                sign(bad[nrow(bad), item]))
-
-  dl <- prepSingleFactorModel(dl, 0.15)
-  dl$alpha <- rep(1, dl$NITEMS)
-  m2 <- suppressWarnings(pcStan("factor_ll", dl, chains=2L, iter=300L,
-               include=FALSE,
-               pars=c('rawUnique', 'rawUniqueTheta', 'rawPerComponentVar',
-                      'rawFactor', 'rawLoadings', 'rawFactorProp', 'rawNegateFactor', 'rawSeenFactor',
-                      'unique', 'uniqueTheta')))
-  loo2 <- suppressWarnings(toLoo(m2, cores=1))
-  ot <- outlierTable(dl, loo2)
   bad <- df[df$pa1==ot[1,'pa1'] & df$pa2==ot[1,'pa2'],]
   item <- as.character(ot[1,'item'])
   expect_true(all(sign(bad[as.numeric(rownames(bad)) <= 300, item])

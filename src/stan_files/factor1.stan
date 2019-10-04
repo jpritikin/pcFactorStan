@@ -14,8 +14,6 @@ data {
   vector[NITEMS] alpha;
   int<lower=1> NFACTORS;
   real factorScalePrior[NFACTORS];
-  int<lower=1> NPSI;  // = NFACTORS * (NFACTORS-1) / 2;
-  real psiScalePrior[NPSI];
   int<lower=1> NPATHS;
   int factorItemPath[2,NPATHS];  // 1 is factor index, 2 is item index
   // response data
@@ -47,7 +45,6 @@ transformed data {
 }
 parameters {
   vector[totalThresholds] threshold;
-  corr_matrix[NFACTORS] Psi;
   matrix[NPA,NFACTORS] rawFactor;      // do not interpret, see factor
   vector[NPATHS] rawLoadings; // do not interpret, see factorLoadings
   matrix[NPA,NITEMS] rawUniqueTheta; // do not interpret, see uniqueTheta
@@ -55,7 +52,6 @@ parameters {
 }
 transformed parameters {
   vector[totalThresholds] cumTh;
-  cholesky_factor_corr[NFACTORS] CholPsi = cholesky_decompose(Psi);
   matrix[NPA,NITEMS] theta;
   vector[NPATHS] rawPathProp;  // always positive
   real rawPerComponentVar[NITEMS,1+NFACTORS];
@@ -99,15 +95,7 @@ model {
   int px=1;
 
   threshold ~ normal(0, 2.0);
-  for (cx in 1:(NFACTORS-1)) {
-    for (rx in (cx+1):NFACTORS) {
-      target += normal_lpdf(logit(0.5 + Psi[rx,cx]/2.0) | 0, psiScalePrior[px]);
-      px += 1;
-    }
-  }
-  for (xx in 1:NPA) {
-    rawFactor[xx,] ~ multi_normal_cholesky_lpdf(rep_vector(0, NFACTORS), CholPsi);
-  }
+  rawFactor[,1] ~ normal(0, 1);
   rawLoadings ~ normal(0, 2.0);
   rawUnique ~ normal(0, 2.0);
   for (ix in 1:NITEMS) {
@@ -132,11 +120,6 @@ model {
   target += normal_lpdf(logit(0.5 + rawPathProp/2.0) | 0, pathScalePrior);
 }
 generated quantities {
-  vector[max(NTHRESH)*2 + 1] prob;
-  int probSize;
-  vector[N] log_lik;
-  int cur = 1;
-
   vector[NPATHS] pathProp = rawPathProp;
   vector[NITEMS] sigma;
   vector[NPATHS] pathLoadings = rawLoadings;
@@ -171,23 +154,5 @@ generated quantities {
   }
   for (fx in 1:NPATHS) {
     if (pathLoadings[fx] < 0) pathProp[fx] = -pathProp[fx];
-  }
-
-  for (cmp in 1:NCMP) {
-    real ll;
-    if (refresh[cmp]) {
-      int ix = item[cmp];
-      int from = TOFFSET[ix];
-      int to = TOFFSET[ix] + NTHRESH[ix] - 1;
-      probSize = (2*NTHRESH[ix]+1);
-      prob[:probSize] = cmp_probs(scale[ix], alpha[ix],
-               theta[pa1[cmp], ix],
-               theta[pa2[cmp], ix], cumTh[from:to]);
-    }
-    ll = categorical_lpmf(rcat[cmp] | prob[:probSize]);
-    for (wx in 1:weight[cmp]) {
-      log_lik[cur] = ll;
-      cur = cur + 1;
-    }
   }
 }

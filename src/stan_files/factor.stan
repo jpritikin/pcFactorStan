@@ -14,6 +14,8 @@ data {
   vector[NITEMS] alpha;
   int<lower=1> NFACTORS;
   real factorScalePrior[NFACTORS];
+  int<lower=1> NPSI;  // = NFACTORS * (NFACTORS-1) / 2;
+  real psiScalePrior[NPSI];
   int<lower=1> NPATHS;
   int factorItemPath[2,NPATHS];  // 1 is factor index, 2 is item index
   // response data
@@ -28,11 +30,9 @@ transformed data {
   int totalThresholds = sum(NTHRESH);
   int rcat[NCMP];
   vector[NPATHS] pathScalePrior;
-  int itemsPerFactor[NFACTORS];
   for (cmp in 1:NCMP) {
     rcat[cmp] = pick[cmp] + NTHRESH[item[cmp]] + 1;
   }
-  for (fx in 1:NFACTORS) itemsPerFactor[fx] = 0;
   for (px in 1:NPATHS) {
     int fx = factorItemPath[1,px];
     int ix = factorItemPath[2,px];
@@ -42,12 +42,12 @@ transformed data {
     if (ix < 1 || ix > NITEMS) {
       reject("factorItemPath[2,","px","] names item ", ix, " (NITEMS=",NITEMS,")");
     }
-    itemsPerFactor[fx] += 1;
     pathScalePrior[px] = factorScalePrior[fx];
   }
 }
 parameters {
   vector[totalThresholds] threshold;
+  corr_matrix[NFACTORS] Psi;
   matrix[NPA,NFACTORS] rawFactor;      // do not interpret, see factor
   vector[NPATHS] rawLoadings; // do not interpret, see factorLoadings
   matrix[NPA,NITEMS] rawUniqueTheta; // do not interpret, see uniqueTheta
@@ -55,6 +55,7 @@ parameters {
 }
 transformed parameters {
   vector[totalThresholds] cumTh;
+  cholesky_factor_corr[NFACTORS] CholPsi = cholesky_decompose(Psi);
   matrix[NPA,NITEMS] theta;
   vector[NPATHS] rawPathProp;  // always positive
   real rawPerComponentVar[NITEMS,1+NFACTORS];
@@ -95,12 +96,19 @@ transformed parameters {
 model {
   vector[max(NTHRESH)*2 + 1] prob;
   int probSize;
+  int px=1;
 
   threshold ~ normal(0, 2.0);
-  rawLoadings ~ normal(0, 2.0);
-  for (fx in 1:NFACTORS) {
-    target += itemsPerFactor[fx] * normal_lpdf(rawFactor[,fx] | 0, 1.0);
+  for (cx in 1:(NFACTORS-1)) {
+    for (rx in (cx+1):NFACTORS) {
+      target += normal_lpdf(logit(0.5 + Psi[rx,cx]/2.0) | 0, psiScalePrior[px]);
+      px += 1;
+    }
   }
+  for (xx in 1:NPA) {
+    rawFactor[xx,] ~ multi_normal_cholesky_lpdf(rep_vector(0, NFACTORS), CholPsi);
+  }
+  rawLoadings ~ normal(0, 2.0);
   rawUnique ~ normal(0, 2.0);
   for (ix in 1:NITEMS) {
     rawUniqueTheta[,ix] ~ normal(0, 1.0);

@@ -50,7 +50,7 @@ test_that("responseCurve", {
 
   dl2 <- prepSingleFactorModel(dl2, 0.2)
   dl2$alpha <- rnorm(dl2$NITEMS, .8, .1)
-  f3 <- sampling(findModel("factor"), dl2, chains=1,
+  f3 <- sampling(findModel("factor1"), dl2, chains=1,
                  cores=0, iter=50, refresh=0)
   rc <- responseCurve(dl2, f3, letters[1:5], 'predict', samples=2, by=1)
   expect_equal(nrow(rc), 130)
