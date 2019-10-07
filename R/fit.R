@@ -250,15 +250,27 @@ prepSingleFactorModel <- function(data, factorScalePrior) {
 #' Specify a factor model with an arbitrary number of factors and
 #' arbitrary factor-to-item structure.
 #'
+#' @details Both \code{factorScalePrior} and \code{psiScalePrior} are
+#'   in the same units. A logistic transformation is applied to the
+#'   signed proportion or correlation such that the parameter value
+#'   becomes an unbounded real. The prior is a zero mean normal on
+#'   this value with the given standard deviation.
+#'
 #' @template detail-factorspec
 #' @template args-path
 #' @template args-factorScalePrior
 #' @template args-data
+#' @param psiScalePrior matrix of priors for factor correlations
 #' @template return-datalist
 #' @examples
 #' pa <- phyActFlowPropensity[,setdiff(colnames(phyActFlowPropensity),
 #'                                     c('goal1','feedback1'))]
 #' dl <- prepData(pa)
+#' psi <- diag(3)
+#' psi[lower.tri(psi)] <- runif(3, 0, .8)
+#' psi[upper.tri(psi)] <- t(psi)[upper.tri(psi)]
+#' fname <- c('flow','f2','rc')
+#' dimnames(psi) <- list(fname, fname)
 #' dl <- prepFactorModel(dl,
 #'                       list(flow=c('complex','skill','predict',
 #'                                   'creative', 'novelty', 'stakes',
@@ -266,7 +278,7 @@ prepSingleFactorModel <- function(data, factorScalePrior) {
 #'                                   'body'),
 #'                            f2=c('waiting','control','evaluated','spont'),
 #'                            rc=c('novelty', 'waiting')),
-#'                       c(flow=0.9, f2=0.5, rc=0.2))
+#'                       c(flow=0.9, f2=0.5, rc=0.2), psi)
 #' str(dl)
 #' @family factor model
 #' @family data preppers
