@@ -346,7 +346,7 @@ rm(fit2)  # free up some memory
 ```
 
 ```{r factor, message=FALSE, results='hide', cache=TRUE}
-fit3 <- pcStan("factor_ll", data=dl, include=FALSE, 
+fit3 <- pcStan("factor1_ll", data=dl, include=FALSE,
                pars=c('rawUnique', 'rawUniqueTheta', 'rawPerComponentVar',
 	       'rawFactor', 'rawLoadings', 'rawFactorProp', 'rawNegateFactor', 'rawSeenFactor',
 	       'unique', 'uniqueTheta'))
@@ -372,50 +372,60 @@ We create a `loo` object and inspect the summary output.
 
 ```{r factorLoo, cache=TRUE}
 options(mc.cores=1)  # otherwise loo consumes too much RAM
-kThreshold <- 0.45
+kThreshold <- 0.3
 l1 <- toLoo(fit3) 
 print(l1)
 ```
 
-```{r results='hide', echo=FALSE}
-if (sum(pareto_k_values(l1)>.5) != 0) stop("Outliers?!")
-```
-
-There are no conspicuous outliers. We can look at `p_loo`,
+The estimated Pareto $k$ estimates are particularly noisy
+due to the many activities with a small sample size.
+Sometimes all $k<0.5$ and sometimes not.
+We can look at `p_loo`,
 the effective number of parameters. In well behaving cases,
 `p_loo` is less than the sample size and the number of parameters.
 This looks good. There are `r dl$NITEMS * dl$NPA` parameters
 just for the unique scores.
 
-To see what an outlier might look like,
+
+To connect $k$ statistics with observations,
 we pass the `loo` object to `outlierTable` and
 use a threshold of `r kThreshold` instead of 0.5 to ensure
-that some lines are shown.
+that we get enough lines.
+Activities with small sample sizes are retained by `filterGraph` if
+they connect other activities because they contribute information to
+the model. When we look at outliers, we can limit ourselves to
+activities with a sample size of at least 11.
 
 ```{r}
+pa11 <- levels(filterGraph(pafp, minDifferent=11L)$pa1)
 ot <- outlierTable(dl, l1, kThreshold)
+ot <- subset(ot, pa1 %in% pa11 & pa2 %in% pa11)
 ```
 ```{r, results='hide'}
-print(ot)
+print(ot[1:6,])
 ```
 ```{r, results='asis', echo=FALSE}
-kable(ot, row.names=TRUE)
+kable(ot[1:6,], row.names=TRUE)
 ```
 
-```{r}
-xx <- which(ot[,'pa1'] == 'calisthenics' & ot[,'pa2'] == 'sex' & ot[,'item'] == 'skill' & ot[,'pick'] == 2)
+```{r, results='hide'}
+xx <- which(ot[,'pa1'] == 'mountain biking' & ot[,'pa2'] == 'climbing' & ot[,'item'] == 'predict' & ot[,'pick'] == -2)
 ```
 
-We will take a closer look at row `r xx`.
+```{r, results='asis', echo=FALSE}
+kable(ot[xx,,drop=FALSE], row.names=TRUE)
+```
+
+We will take a closer look at row `r rownames(ot)[xx]`.
 What does a `pick` of `r ot[xx,'pick']` mean? `Pick` numbers are converted
 to response categories by adding the number of thresholds plus one.
 There are two thresholds (_much_ and _somewhat_) so
 3 + `r ot[xx,'pick']` = `r 3+ot[xx,'pick']`.
 Looking back at our item response curve plot,
 the legend gives the response category order from top (1) to bottom (5).
-The last response category is _much less_.
+The first response category is _much more_.
 Putting it all together we obtain an endorsement of
-_`r ot[xx,'pa1']` involves much less skill than `r ot[xx,'pa2']`_.
+_`r ot[xx,'pa1']` is much more predictable than `r ot[xx,'pa2']`_.
 Specifically what about that assertion is unexpected?
 We can examine how other participants have responded,
 
@@ -424,12 +434,12 @@ pafp[pafp$pa1 == ot[xx,'pa1'] & pafp$pa2 == ot[xx,'pa2'],
      c('pa1','pa2', as.character(ot[xx,'item']))]
 ```
 
-Hm, this is the only participant that compared `r ot[xx,'pa1']` and `r ot[xx,'pa2']`.
+Hm, both participants agreed.
 Let us look a little deeper to understand why this response
 was unexpected.
 
 ```{r outlier, cache=TRUE}
-loc <- sapply(ot[xx,c('pa1','pa2','item')], unfactor)
+loc <- sapply(ot[xx,c('pa1','pa2','item')], unfactor) 
 exam <- summary(fit3, pars=paste0("theta[",loc[paste0('pa',1:2)],
                           ",", loc['item'],"]"))$summary
 rownames(exam) <- c(as.character(ot[xx,'pa1']), as.character(ot[xx,'pa2']))
@@ -439,9 +449,10 @@ rownames(exam) <- c(as.character(ot[xx,'pa1']), as.character(ot[xx,'pa2']))
 kable(exam)
 ```
 
-Here we find that, based on comparisons with other activities,
-`r ot[xx,'pa2']` was estimated to involve `r exam[2,'mean'] - exam[1,'mean']` units more
-skill than `r ot[xx,'pa1']`. However, note the wide posterior quantiles!
+Here we find that
+`r ot[xx,'pa1']` was estimated `r exam[1,'mean'] - exam[2,'mean']` units more
+predictable than `r ot[xx,'pa2']`, but apparently this ranking was
+contradicted by most other observations.
 What sample sizes are associated with these activities?
 
 ```{r}
@@ -449,16 +460,16 @@ sum(c(pafp$pa1 == ot[xx,'pa1'], pafp$pa2 == ot[xx,'pa1']))
 sum(c(pafp$pa1 == ot[xx,'pa2'], pafp$pa2 == ot[xx,'pa2']))
 ```
 
-Ah, no wonder, the body involvement 95% uncertainty interval for `r ot[xx,'pa2']`
+Hm, the predictability 95% uncertainty interval for `r ot[xx,'pa2']`
 is from `r exam[2,'2.5%']` to `r exam[2,'97.5%']`.
-So there is practically no information.
+So there is little information.
 We could continue our investigation by looking at which
-responses justified these _skill_ estimates.
+responses justified these _predict_ estimates.
 However, let us move on and
 plot the marginal posterior distributions of the factor proportions,
 
 ```{r pathProp, cache=TRUE}
-pi <- parInterval(fit3, 'pathProp', dl$nameInfo$item, label='item') 
+pi <- parInterval(fit3, 'pathProp', dl$nameInfo$item, label='item')
 pi <- pi[order(abs(pi$M)),]
 pi$item <- factor(pi$item, levels=pi$item)
 
@@ -472,14 +483,9 @@ ggplot(pi) +
   theme(axis.title.y=element_blank())
 ```
 
-Finally, we can plot the factor scores. By default, activities with small sample
-sizes are retained by `filterGraph` if they connect other activities
-because they contribute information to the model. However, when we
-look at the per-activity factor scores, we can limit ourselves to
-activities with a sample size of at least 11.
+Finally, we can plot the factor scores.
 
 ```{r activities, cache=TRUE}
-pa11 <- levels(filterGraph(pafp, minDifferent=11L)$pa1)
 pick <- paste0('factor[',match(pa11, dl$nameInfo$pa),',1]')
 pi <- parInterval(fit3, pick, pa11, label='activity')
 pi <- pi[order(pi$M),]
@@ -558,17 +564,21 @@ Exclude `rawTheta` and `rawThetaCorChol` from sampling reports.
 | threshold      | normal(0,2)         | item response thresholds             |
 | unique         | normal(0,2)         | scale of unique scores               |
 | uniqueTheta    | normal(0,1)         | unique scores                        |
-| factorLoadings | normal(0,2)         | signed scale of factor scores        |
+| pathLoadings   | normal(0,2)         | signed scale of factor scores        |
 | factor         | normal(0,1)         | factor scores                        |
 | pathProp       | _see below_         | signed factor variance proportion    |
+| Psi            | _see below_         | factor correlations                  |
 | sigma          | N/A                 | relative item scale                  |
 
 Thresholds for all items are combined into a single vector.
 `pathProp` is computed based on Equation 3 of Gelman et al. (in press).
 The prior on `pathProp` is `normal(logit(0.5 + pathProp/2), pathScalePrior)`
 where `pathScalePrior` is provided as data (see `prepSingleFactorModel()`).
-The idea of putting a prior on `pathProp` was inspired by Gelman (2019, Aug 23).
-The `unique` and `factorLoadings` parameters are only relatively interpretable because
+If you have more than one factor then `Psi` is available
+to estimate correlations among factors.
+Similar to `pathScalePrior`,
+the prior on entries of `Psi` is `normal(logit(0.5 + Psi/2), psiScalePrior)`.
+The `unique` and `pathLoadings` parameters are only relatively interpretable because
 the scale is arbitrary.
 The most interpretable parameter is `pathProp`.
 `pathProp` is a signed proportion bounded between -1 and 1.
@@ -576,6 +586,8 @@ Exclude `rawUnique`, `rawUniqueTheta`, `rawFactor`, `rawLoadings`, `rawPerCompon
 `rawPathProp`, `rawNegateFactor`, and `rawSeenFactor` from sampling.
 You may also like to exclude `unique` and `uniqueTheta` unless you have
 some special interest in the unique scores.
+
+The idea of putting a prior on `pathProp` was inspired by Gelman (2019, Aug 23).
 
 # References
 

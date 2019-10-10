@@ -303,7 +303,7 @@ prepFactorModel <- function(data, path, factorScalePrior,
       stop("psiScalePrior must have dimnames")
     }
     if (any(colnames(psiScalePrior) != rownames(psiScalePrior))) {
-      stop("psiScalePrior must have identify row and column names")
+      stop("psiScalePrior must have identical row and column names")
     }
     if (any(psiScalePrior != t(psiScalePrior))) {
       stop("psiScalePrior must be symmetric")
