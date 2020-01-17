@@ -96,8 +96,8 @@ model {
 
   threshold ~ normal(0, 2.0);
   rawFactor[,1] ~ normal(0, 1);
-  rawLoadings ~ normal(0, 2.0);
-  rawUnique ~ normal(0, 2.0);
+  rawLoadings ~ normal(0, 5.0);
+  rawUnique ~ normal(0, 5.0);
   for (ix in 1:NITEMS) {
     rawUniqueTheta[,ix] ~ normal(0, 1.0);
   }

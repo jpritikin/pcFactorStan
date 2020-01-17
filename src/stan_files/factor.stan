@@ -108,8 +108,8 @@ model {
   for (xx in 1:NPA) {
     rawFactor[xx,] ~ multi_normal_cholesky_lpdf(rep_vector(0, NFACTORS), CholPsi);
   }
-  rawLoadings ~ normal(0, 2.0);
-  rawUnique ~ normal(0, 2.0);
+  rawLoadings ~ normal(0, 5.0);
+  rawUnique ~ normal(0, 5.0);
   for (ix in 1:NITEMS) {
     rawUniqueTheta[,ix] ~ normal(0, 1.0);
   }

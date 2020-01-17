@@ -358,7 +358,7 @@ many parameters that should not be interpreted. For example, we do not
 care about `unique` or `uniqueTheta`, the unique scores.
 
 ```{r factorDiag1, cache=TRUE}
-check_hmc_diagnostics(fit3)
+check_hmc_diagnostics(fit3) 
 
 interest <- c("threshold", "pathProp", "factor", "lp__")
 
@@ -371,8 +371,8 @@ Looks good! Let us see which data are the most unexpected by the model.
 We create a `loo` object and inspect the summary output.
 
 ```{r factorLoo, cache=TRUE}
-options(mc.cores=1)  # otherwise loo consumes too much RAM
-kThreshold <- 0.3
+options(mc.cores=1)  # otherwise loo consumes too much RAM 
+kThreshold <- 0.1
 l1 <- toLoo(fit3) 
 print(l1)
 ```
@@ -439,7 +439,7 @@ Let us look a little deeper to understand why this response
 was unexpected.
 
 ```{r outlier, cache=TRUE}
-loc <- sapply(ot[xx,c('pa1','pa2','item')], unfactor) 
+loc <- sapply(ot[xx,c('pa1','pa2','item')], unfactor)
 exam <- summary(fit3, pars=paste0("theta[",loc[paste0('pa',1:2)],
                           ",", loc['item'],"]"))$summary
 rownames(exam) <- c(as.character(ot[xx,'pa1']), as.character(ot[xx,'pa2']))
