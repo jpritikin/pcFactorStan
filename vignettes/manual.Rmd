@@ -21,8 +21,6 @@ if (!is_CRAN) {
    q()  # takes too long, pretend everything is fine
 }
 library(knitr)
-library(ggplot2)
-library(reshape2)
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -64,12 +62,15 @@ fit 'unidim_adapt' to each item separately.
 ## Physical activity flow propensity
 
 The R code below first loads **rstan** and **pcFactorStan**.
-For extra diagnostics, we also load **loo**.
+We load **loo** for extra diagnostics, and
+**qgraph** and **ggplot2** for visualization.
 
 ```{r, message=FALSE}
 library(rstan)
 library(pcFactorStan)
 library(loo)
+library(qgraph)
+library(ggplot2)
 ```
 
 Next we take a peek at the data.
@@ -136,8 +137,6 @@ then we would sample the model again with more iterations.
 Time for a plot,
 
 ```{r skill, cache=TRUE}
-library(ggplot2)
-
 theta <- summary(fit1, pars=c("theta"), probs=c())$summary[,'mean']
 
 ggplot(data.frame(x=theta, activity=dl$nameInfo$pa, y=0.47)) +
@@ -242,7 +241,6 @@ tc <- summary(fit2, pars=c("thetaCor"), probs=c(.5))$summary[,'50%']
 tcor <- matrix(tc, length(covItemNames), length(covItemNames))
 dimnames(tcor) <- list(covItemNames, covItemNames)
 
-library(qgraph)
 qgraph(tcor, layout = "spring", graph = "cor", labels=colnames(tcor),
        legend.cex = 0.3,
        cut = 0.3, maximum = 1, minimum = 0, esize = 20,
@@ -349,7 +347,7 @@ rm(fit2)  # free up some memory
 fit3 <- pcStan("factor1_ll", data=dl, include=FALSE,
                pars=c('rawUnique', 'rawUniqueTheta', 'rawPerComponentVar',
 	       'rawFactor', 'rawLoadings', 'rawFactorProp', 'rawNegateFactor', 'rawSeenFactor',
-	       'unique', 'uniqueTheta'))
+	       'residual'))
 ```
 
 To check the fit diagnostics, we have to take care to
@@ -501,6 +499,43 @@ ggplot(pi) +
   theme(axis.title.y=element_blank()) 
 ```
 
+If this factor model is a good fit to the data
+then the residual item activity scores should be uncorrelated.
+Let us examine the residual item correlation matrix.
+
+```{r residualItemCor, cache=TRUE}
+ric <- summary(fit3, pars=c('residualItemCor'), prob=c(.2,.5,.8))$summary
+r20 <- matrix(ric[,'20%'], length(dl$nameInfo$item), length(dl$nameInfo$item),
+       dimnames=list(dl$nameInfo$item,dl$nameInfo$item))
+r50 <- matrix(ric[,'50%'], length(dl$nameInfo$item), length(dl$nameInfo$item),
+              dimnames=list(dl$nameInfo$item,dl$nameInfo$item))
+r80 <- matrix(ric[,'80%'], length(dl$nameInfo$item), length(dl$nameInfo$item),
+       dimnames=list(dl$nameInfo$item,dl$nameInfo$item))
+ric5 <- fivenum(r50[lower.tri(r50)]) 
+mask <- sign(r20) == -sign(r80) # small, not statistically significant
+r50[mask] <- 0
+diag(r50) <- 2*max(abs(r50[lower.tri(r50)]))  # rescale for better visualization
+
+qgraph(r50, layout = "spring", graph = "cor", labels=colnames(r50),
+       legend.cex = 0.3,
+       cut = 0.3, maximum = 1, minimum = 0, esize = 20,
+       vsize = 7, repulsion = 0.8, negDashed=TRUE, theme="colorblind")
+```
+
+Median residual correlations ranged from `r ric5[1]` to `r ric5[5]`.
+To reduce visual clutter,
+small correlations with 60\% posterior intervals crossing zero were set to zero.
+This is conservative; Almost none of the correlations would remain
+if a 90\% interval was used instead.
+_Stakes_ is an ideal item, uncorrelated with other items.
+There seem to be two main clusters.
+_Body_, _reward_, and _chatter_ seem more emotional
+while _novelty_, _creative_, and _present_ seem more cognitive.
+That the items faintly cluster along a cognitive-emotional
+spectrum, with _skill_ in between, is not necessarily problematic.
+It seems likely that any survey measure is going to exhibit
+some faint correlations of this nature.
+
 And there you have it. If you have not done so already,
 go find a dojo and commence study of martial arts!
 
@@ -559,16 +594,15 @@ Exclude `rawTheta` and `rawThetaCorChol` from sampling reports.
 
 ## Factor
 
-| parameter      | prior               | purpose                              |
-|----------------|---------------------|--------------------------------------|
-| threshold      | normal(0,2)         | item response thresholds             |
-| unique         | normal(0,2)         | scale of unique scores               |
-| uniqueTheta    | normal(0,1)         | unique scores                        |
-| pathLoadings   | normal(0,2)         | signed scale of factor scores        |
-| factor         | normal(0,1)         | factor scores                        |
-| pathProp       | _see below_         | signed factor variance proportion    |
-| Psi            | _see below_         | factor correlations                  |
-| sigma          | N/A                 | relative item scale                  |
+| parameter       | prior               | purpose                              |
+|-----------------|---------------------|--------------------------------------|
+| threshold       | normal(0,2)         | item response thresholds             |
+| pathLoadings    | normal(0,5)         | signed scale of factor scores        |
+| factor          | normal(0,1)         | factor scores                        |
+| pathProp        | _see below_         | signed factor variance proportion    |
+| Psi             | _see below_         | factor correlations                  |
+| sigma           | N/A                 | relative item scale                  |
+| residualItemCor | N/A                 | residual item correlation matrix     |
 
 Thresholds for all items are combined into a single vector.
 `pathProp` is computed based on Equation 3 of Gelman et al. (in press).
@@ -583,9 +617,7 @@ the scale is arbitrary.
 The most interpretable parameter is `pathProp`.
 `pathProp` is a signed proportion bounded between -1 and 1.
 Exclude `rawUnique`, `rawUniqueTheta`, `rawFactor`, `rawLoadings`, `rawPerComponentVar`,
-`rawPathProp`, `rawNegateFactor`, and `rawSeenFactor` from sampling.
-You may also like to exclude `unique` and `uniqueTheta` unless you have
-some special interest in the unique scores.
+`rawPathProp`, `rawNegateFactor`, `rawSeenFactor`, and `residual` from sampling.
 
 The idea of putting a prior on `pathProp` was inspired by Gelman (2019, Aug 23).
 

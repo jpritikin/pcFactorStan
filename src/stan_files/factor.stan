@@ -136,17 +136,20 @@ generated quantities {
   vector[NITEMS] sigma;
   vector[NPATHS] pathLoadings = rawLoadings;
   matrix[NPA,NFACTORS] factor = rawFactor;
-  row_vector[NITEMS] unique = rawUnique';
-  matrix[NPA,NITEMS] uniqueTheta = rawUniqueTheta;
+  matrix[NPA,NITEMS] residual;
+  matrix[NITEMS,NITEMS] residualItemCor;
   int rawSeenFactor[NFACTORS];
   int rawNegateFactor[NFACTORS];
 
+  for (ix in 1:NITEMS) {
+    residual[,ix] = rawUniqueTheta[,ix] * rawUnique[ix];
+    residual[,ix] -= mean(residual[,ix]);
+  }
+  residualItemCor = crossprod(residual);
+  residualItemCor = quad_form_diag(residualItemCor, 1.0 ./ sqrt(diagonal(residualItemCor)));
+
   for (fx in 1:NITEMS) {
     sigma[fx] = sd(theta[,fx]);
-    if (unique[fx] < 0) {
-      unique[fx] = -unique[fx];
-      uniqueTheta[,fx] = -uniqueTheta[,fx];
-    }
   }
   for (fx in 1:NFACTORS) rawSeenFactor[fx] = 0;
   for (px in 1:NPATHS) {
