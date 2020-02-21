@@ -52,7 +52,7 @@ model {
 
   rawThetaCorChol ~ lkj_corr_cholesky(2);
   for (pa in 1:NPA) {
-    rawTheta[pa,] ~ normal(0,1);
+    rawTheta[pa,] ~ std_normal();
   }
   threshold ~ normal(0, 2.0);
   alpha ~ exponential(0.1);

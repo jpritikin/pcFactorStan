@@ -95,11 +95,11 @@ model {
   int px=1;
 
   threshold ~ normal(0, 2.0);
-  rawFactor[,1] ~ normal(0, 1);
+  rawFactor[,1] ~ std_normal();
   rawLoadings ~ normal(0, 5.0);
   rawUnique ~ normal(0, 5.0);
   for (ix in 1:NITEMS) {
-    rawUniqueTheta[,ix] ~ normal(0, 1.0);
+    rawUniqueTheta[,ix] ~ std_normal();
   }
   for (cmp in 1:NCMP) {
     if (refresh[cmp]) {

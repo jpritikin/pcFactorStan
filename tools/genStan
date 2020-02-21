@@ -216,7 +216,7 @@ model {
 
   rawThetaCorChol ~ lkj_corr_cholesky(2);
   for (pa in 1:NPA) {
-    rawTheta[pa,] ~ normal(0,1);
+    rawTheta[pa,] ~ std_normal();
   }
   $multivariateThresholdPrior
   $alpha_prior
@@ -238,7 +238,7 @@ sub mkFactorModel {
     my $psiParam = '';
     my $psiTparam = '';
     my $latentPrior = '
-  rawFactor[,1] ~ normal(0, 1);';
+  rawFactor[,1] ~ std_normal();';
     if ($psi) {
 	$psiData = '
   int<lower=1> NPSI;  // = NFACTORS * (NFACTORS-1) / 2;
@@ -330,7 +330,7 @@ model {
   rawLoadings ~ normal(0, 5.0);
   rawUnique ~ normal(0, 5.0);
   for (ix in 1:NITEMS) {
-    rawUniqueTheta[,ix] ~ normal(0, 1.0);
+    rawUniqueTheta[,ix] ~ std_normal();
   }
   $multivariateQuickLikelihood
   target += normal_lpdf(logit(0.5 + rawPathProp/2.0) | 0, pathScalePrior);
