@@ -10,8 +10,7 @@
 #' inspection.
 #'
 #' @template detail-response
-#' @template ref-masters1982
-#' 
+#'
 #' @importFrom rstan summary
 #' @export
 #' @examples

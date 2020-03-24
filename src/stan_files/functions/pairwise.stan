@@ -1,14 +1,26 @@
 vector cmp_probs(real scale, real alpha, real pa1, real pa2, vector thr) {
   int nth = num_elements(thr);
-  vector[1+nth*2] unsummed;
-  real paDiff = scale * (pa2 - pa1);
-  unsummed[1] = 0;
-  for (tx in 1:nth) {
-    real t1 = thr[nth+1-tx];
-    unsummed[1+tx] = paDiff + t1;
-    unsummed[1+2*nth+1-tx] = paDiff - t1;
+  real at[nth*2];
+  real pr[2+nth*2];
+  vector[1 + nth*2] out;
+  real paDiff = scale * (pa1 - pa2);
+  for (tx in 1:num_elements(at)) {
+    if (tx <= nth) {
+      at[tx] = paDiff - thr[nth+1-tx];
+    } else {
+      at[tx] = paDiff + thr[tx-nth];
+    }
   }
-  return softmax(cumulative_sum(alpha * unsummed));
+  pr[1] = 0;
+  pr[2+nth*2] = 1;
+  for (tx in 1:num_elements(at)) {
+    // TODO hoist mult by alpha
+    pr[1+tx] = 1.0/(1.0+exp(-at[tx]*alpha));
+  }
+  for (tx in 1:num_elements(out)) {
+    out[tx] = pr[tx+1] - pr[tx];
+  }
+  return out;
 }
 
 real pairwise_logprob(int[] rcat, int[] weight, int cmpStart, int len,

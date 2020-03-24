@@ -1,10 +1,62 @@
-softmax <- function(y) exp(y) / sum(exp(y))
-
-cmp_probs <- function(scale, alpha, pa1, pa2, thRaw) {
-  th <- cumsum(thRaw)
-  diff <- scale * (pa2 - pa1)
-  unsummed <- c(0, diff + rev(th), diff - th, use.names = FALSE)
-  softmax(cumsum(alpha * unsummed))
+#' Item response function for pairwise comparisons
+#'
+#' Use \code{\link{itemModelExplorer}} to explore the item model. In
+#' this \pkg{shiny} app, the \emph{discrimination} parameter does what
+#' is customary in item response models. However, it is not difficult
+#' to show that discrimination is a function of thresholds and
+#' scale. That is, discrimination is not an independent parameter.  In
+#' paired comparison models, discrimination and measurement error are
+#' confounded.
+#'
+#' @details
+#'
+#' The thresholds are parameterized as the difference
+#' from the previous threshold. For example, thresholds c(0.5, 0.6)
+#' are not at the same location but are at locations c(0.5,
+#' 1.1). Thresholds are symmetric. If there is one threshold then the
+#' model admits three possible response outcomes (e.g. \emph{win}, \emph{tie}, and
+#' \emph{lose}). Responses are always stored centered with zero representing
+#' a tie. Therefore, it is necessary to add one plus the number of
+#' thresholds to response data to index into the vector returned by
+#' \code{cmp_probs}. For example, if our response data is (-1, 0, 1)
+#' and has one threshold then we would add 2 (1 + 1 threshold) to
+#' obtain the indices (1, 2, 3).
+#'
+#' @section Math:
+#' Up until version 1.4, the item response model was based on the
+#' partial credit model (Masters, 1982). In version 1.5,
+#' the graded response model is used instead (Samejima, 1969).
+#' The advantage of the graded response model is greater
+#' independence among threshold parameters and the ability to
+#' compute only the parts of the model that are actually needed
+#' given particular observations. The curves predicted by both
+#' models are similar and should obtain similar results in data
+#' analyses.
+#'
+#' @param alpha discrimination parameter
+#' @param scale scale correction factor
+#' @param pa1 first latent worth
+#' @param pa2 second latent worth
+#' @param thRaw vector of positive thresholds
+#' @template ref-samejima1969
+#' @template ref-masters1982
+#' @export
+#' @return A vector of probabilities of observing each outcome
+#' @examples
+#' # Returns probabilities of
+#' # c(pa1 > pa2, pa1 = pa2, pa1 < pa2)
+#' cmp_probs(1,1,0,1,.8)
+#'
+#' # Add another threshold for a symmtric 3 point Likert scale
+#' cmp_probs(1,1,0,.5,c(.8, 1.6))
+cmp_probs <- function(alpha, scale, pa1, pa2, thRaw) {
+  th <- cumsum(abs(thRaw))
+  diff <- scale * (pa1 - pa2)
+  at <- c(diff - rev(th), diff + th)
+  #  pr <- plogis(at, scale=1.0/alpha)
+  pr <- 1/(1+exp(-at*alpha))
+  pr <- c(0, pr, 1)
+  diff(pr)
 }
 
 pairMap <- function(n) {
@@ -60,8 +112,7 @@ assertNameUnused <- function(df, name) {
 #'
 #' @template detail-response
 #' @template detail-genfactor
-#' 
-#' @template ref-masters1982
+#'
 #' @template ref-silver2018
 #' @return
 #' The given data.frame \code{df} with additional columns for each item.
@@ -153,18 +204,17 @@ ssqrt <- function(v) sign(v)*sqrt(abs(v))
 #' Generate paired comparison data given a mapping from factors to items.
 #'
 #' @template detail-factorspec
-#' 
+#'
 #' @details Path proportions (factor-to-item loadings) are sampled
 #'   from a logistic transformed normal distribution with scale
 #'   \code{factorScalePrior}. A few attempts are made to resample path
 #'   proportions if any of the item proportions sum to more than
 #'   1.0. An exception will be raised if repeated attempts fail to
 #'   produce viable proportion assignments.
-#' 
+#'
 #' @template detail-response
 #' @template detail-genfactor
-#' 
-#' @template ref-masters1982
+#'
 #' @template ref-silver2018
 #' @family item generators
 #' @return
@@ -172,7 +222,7 @@ ssqrt <- function(v) sign(v)*sqrt(abs(v))
 #' In addition, you can obtain path proportions (factor-to-item loadings) from \code{attr(df, "pathProp")},
 #' the factor scores from \code{attr(df, "score")},
 #' and latent worths from \code{attr(df, "worth")}.
-#' 
+#'
 #' @seealso To fit a factor model: \link{prepFactorModel}
 #' @examples
 #' df <- twoLevelGraph(letters[1:10], 100)
@@ -261,14 +311,13 @@ generateFactorItems <- function(df, path, factorScalePrior, th=0.5, name, ..., s
 #' This is not difficult. See how in the example.
 #'
 #' @template detail-response
-#' @template ref-masters1982
 #' @family item generators
 #' @return
 #' The given data.frame \code{df} with additional columns for each item.
 #' In addition, you can obtain the correlation matrix used
 #' to generate the latent worths from \code{attr(df, "cor")} and
 #' and latent worths from \code{attr(df, "worth")}.
-#' 
+#'
 #' @examples
 #' library(mvtnorm)
 #' df <- twoLevelGraph(letters[1:10], 100)
@@ -332,7 +381,6 @@ generateCovItems <- function(df, numItems, th=0.5, name, ..., scale=1, alpha=1) 
 #' \sQuote{a}.
 #'
 #' @template detail-response
-#' @template ref-masters1982
 #' @family item generators
 #' @return
 #' The given data.frame \code{df} with additional columns for each item.

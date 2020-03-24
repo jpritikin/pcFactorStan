@@ -127,7 +127,7 @@ Everything looks good, but there are a few more things to check.
 We want $\widehat R$ < 1.015 and effective sample size greater than 100 times the number of chains (Vehtari et al., 2019).
 
 ```{r pcStanDiag2, cache=TRUE}
-allPars <- summary(fit1, probs=c())$summary 
+allPars <- summary(fit1, probs=c())$summary
 print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
@@ -172,7 +172,7 @@ Fortunately, `calibrateItems` takes care of it and produces a table
 of the pertinent data,
 
 ```{r calibrateItems, message=FALSE, results='hide', cache=TRUE}
-result <- calibrateItems(phyActFlowPropensity, iter=1000L) 
+result <- calibrateItems(phyActFlowPropensity, iter=1000L)
 ```
 ```{r, results='hide'}
 print(result)
@@ -195,11 +195,11 @@ Next we will fit the correlation model. We exclude the Cholesky
 factor of the correlation matrix `rawThetaCorChol` because the
 regular correlation matrix is also output.
 ```{r covarianceData, cache=TRUE}
-pafp <- phyActFlowPropensity 
+pafp <- phyActFlowPropensity
 excl <- match(c('goal1','feedback1'), colnames(pafp))
 pafp <- pafp[,-excl]
 dl <- prepData(pafp)
-dl$scale <- result[-excl,'scale'] 
+dl$scale <- result[-excl,'scale']
 ```
 
 ```{r covariance, message=FALSE, results='hide', cache=TRUE}
@@ -209,7 +209,7 @@ fit2 <- pcStan("correlation", data=dl, include=FALSE, pars=c('rawTheta', 'rawThe
 ```{r covarianceDiag1, cache=TRUE}
 check_hmc_diagnostics(fit2)
 
-allPars <- summary(fit2, probs=0.5)$summary 
+allPars <- summary(fit2, probs=0.5)$summary
 print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
@@ -226,7 +226,7 @@ including the entries that are not stochastic but are fixed to constant values.
 We need to filter those out to get sensible results.
 
 ```{r covarianceDiag3, cache=TRUE}
-allPars <- allPars[allPars[,'sd'] > 1e-6,] 
+allPars <- allPars[allPars[,'sd'] > 1e-6,]
 print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
@@ -236,7 +236,7 @@ many ways to visualize a correlation matrix. One of my favorite
 ways is to plot it using the **qgraph** package,
 
 ```{r covPlot, cache=TRUE}
-covItemNames <- dl$nameInfo$item 
+covItemNames <- dl$nameInfo$item
 tc <- summary(fit2, pars=c("thetaCor"), probs=c(.5))$summary[,'50%']
 tcor <- matrix(tc, length(covItemNames), length(covItemNames))
 dimnames(tcor) <- list(covItemNames, covItemNames)
@@ -356,7 +356,7 @@ many parameters that should not be interpreted. For example, we do not
 care about `unique` or `uniqueTheta`, the unique scores.
 
 ```{r factorDiag1, cache=TRUE}
-check_hmc_diagnostics(fit3) 
+check_hmc_diagnostics(fit3)
 
 interest <- c("threshold", "pathProp", "factor", "lp__")
 
@@ -369,9 +369,9 @@ Looks good! Let us see which data are the most unexpected by the model.
 We create a `loo` object and inspect the summary output.
 
 ```{r factorLoo, cache=TRUE}
-options(mc.cores=1)  # otherwise loo consumes too much RAM 
+options(mc.cores=1)  # otherwise loo consumes too much RAM
 kThreshold <- 0.1
-l1 <- toLoo(fit3) 
+l1 <- toLoo(fit3)
 print(l1)
 ```
 
@@ -496,7 +496,7 @@ ggplot(pi) +
   geom_segment(aes(y=activity, yend=activity, x=L, xend=U),
                color="yellow", alpha=.5) +
   geom_point(aes(x=M, y=activity), color="red", size=1) +
-  theme(axis.title.y=element_blank()) 
+  theme(axis.title.y=element_blank())
 ```
 
 If this factor model is a good fit to the data
@@ -511,7 +511,7 @@ r50 <- matrix(ric[,'50%'], length(dl$nameInfo$item), length(dl$nameInfo$item),
               dimnames=list(dl$nameInfo$item,dl$nameInfo$item))
 r80 <- matrix(ric[,'80%'], length(dl$nameInfo$item), length(dl$nameInfo$item),
        dimnames=list(dl$nameInfo$item,dl$nameInfo$item))
-ric5 <- fivenum(r50[lower.tri(r50)]) 
+ric5 <- fivenum(r50[lower.tri(r50)])
 mask <- sign(r20) == -sign(r80) # small, not statistically significant
 r50[mask] <- 0
 diag(r50) <- 2*max(abs(r50[lower.tri(r50)]))  # rescale for better visualization
@@ -557,7 +557,7 @@ from the sampling output.
 
 | parameter | prior             | purpose                  |
 |-----------|-------------------|--------------------------|
-| threshold | normal(0,2)       | item response thresholds |
+| threshold | lognormal(0,1)    | item response thresholds |
 | theta     | normal(0,sigma)   | latent score             |
 | sigma     | lognormal(1,1)    | latent score scale             |
 | scale     | N/A               | latent score scaling constant  |
@@ -574,7 +574,7 @@ item discrimination is interpretable.
 
 | parameter | prior             | purpose                  |
 |-----------|-------------------|--------------------------|
-| threshold | normal(0,2)       | item response thresholds |
+| threshold | lognormal(0,1)    | item response thresholds |
 | alpha     | exponential(0.1)  | item discrimination    |
 | theta     | normal(0,1)       | latent score    |
 
@@ -582,7 +582,7 @@ item discrimination is interpretable.
 
 | parameter | prior             | purpose                              |
 |-----------|-------------------|--------------------------------------|
-| threshold | normal(0,2)       | item response thresholds             |
+| threshold | lognormal(0,1)    | item response thresholds             |
 | alpha     | exponential(0.1)  | item discrimination    |
 | thetaCor  | lkj(2)            | correlations between items           |
 | theta     | _see below_       | latent score                |
@@ -596,7 +596,7 @@ Exclude `rawTheta` and `rawThetaCorChol` from sampling reports.
 
 | parameter       | prior               | purpose                              |
 |-----------------|---------------------|--------------------------------------|
-| threshold       | normal(0,2)         | item response thresholds             |
+| threshold       | lognormal(0,1)      | item response thresholds             |
 | pathLoadings    | normal(0,5)         | signed scale of factor scores        |
 | factor          | normal(0,1)         | factor scores                        |
 | pathProp        | _see below_         | signed factor variance proportion    |

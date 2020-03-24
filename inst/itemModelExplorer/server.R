@@ -23,16 +23,39 @@ moveParameter <- function(input, state, newValue) {
 
 softmax <- function(y) exp(y) / sum(exp(y))
 
-cmp_probs <- function(alpha, scale, rawDiff, thRaw) {
+cmp_probs.old <- function(alpha, scale, rawDiff, thRaw) {
   th <- cumsum(thRaw)
   diff = scale * rawDiff
   unsummed <- c(0, diff + rev(th), diff - th, use.names = FALSE)
-  cumsum(unsummed * alpha)
+  softmax(cumsum(unsummed * alpha))
 }
 
-calcProb <- function(par, theta) {
-  sapply(theta, function(x) softmax(cmp_probs(par['discrimination'], par['scale'], x,
-    par[-(1:2)])), USE.NAMES=FALSE)
+cmp_probs.new <- function(alpha, scale, rawDiff, thRaw) {
+  th <- cumsum(abs(thRaw))
+  diff <- scale * rawDiff
+  at <- c(diff - rev(th), diff + th)
+#  pr <- plogis(at, scale=1.0/alpha)
+  pr <- 1/(1+exp(-at*alpha))
+  pr <- c(0, pr, 1)
+  diff(pr)
+}
+
+cmp_probs <- function(newModel, alpha, scale, rawDiff, thRaw) {
+  if (newModel) {
+    cmp_probs.new(alpha, scale, rawDiff, thRaw)
+  } else {
+    cmp_probs.old(alpha, scale, rawDiff, thRaw)
+  }
+}
+
+calcProb <- function(newModel, par, theta) {
+  pr <- t(sapply(theta, function(x) {
+    cmp_probs(newModel,
+              par['discrimination'], par['scale'], x,
+              par[-(1:2)])
+  }, USE.NAMES=FALSE))
+  colnames(pr) <- paste0('o', 1:ncol(pr))
+  pr
 }
 
 shinyServer(function(input, output, session) {
@@ -78,13 +101,14 @@ shinyServer(function(input, output, session) {
     width <- 4
     grid <- expand.grid(theta=seq(-width,width,.1))
 
-    trace <- try(calcProb(state$par, grid$theta), silent = TRUE)
+    trace <- try(calcProb(input$newModel, state$par, grid$theta), silent = TRUE)
     if (inherits(trace, "try-error") || any(is.na(trace))) {
+      if (verbose) print(trace)
       pl <- ggplot(grid, aes(theta, 0)) + geom_line() + ylim(0,1) +
         geom_text(label="Invalid parameters", y=.5, x=0, size=14, color="red")
       return(pl)
     }
-    grid <- cbind(grid, t(trace))
+    grid <- cbind(grid, trace)
     grid2 <- melt(grid, id.vars=c("theta"), variable.name="category", value.name="p")
 
     ggplot(grid2, aes(theta, p, color=category)) + geom_line() +

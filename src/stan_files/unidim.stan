@@ -27,7 +27,7 @@ transformed data {
 }
 parameters {
   vector[NPA] theta;
-  vector[NTHRESH] threshold;
+  vector<lower=0>[NTHRESH] threshold;
   real<lower=0> alpha;
 }
 transformed parameters {
@@ -36,7 +36,7 @@ transformed parameters {
 model {
   alpha ~ exponential(0.1);
   theta ~ normal(0, 1.0);
-  threshold ~ normal(0, 2.0);
+  threshold ~ lognormal(0, 1.0);
 
   {
     int cmpStart = 1;

@@ -1,33 +1,55 @@
 Package: pcFactorStan
 Title: Stan Models for the Paired Comparison Factor Model
-Version: 1.4.0
+Version: 1.5.0
 Authors@R:
     c(person(given = c("Joshua", "N."),
-           family = "Pritikin",
-           role = c("aut", "cre"),
-           email = "jpritikin@pobox.com",
-           comment = c(ORCID = "0000-0002-9862-5484")),
-	   person(given = c("Daniel C."), family = "Furr", role="ctb", email = "danielcfurr@berkeley.edu"),
-	   person("Trustees of Columbia University", role="cph"))
-Description: Provides convenience functions and pre-programmed Stan models
-    related to the paired comparison factor model. Its purpose is to make fitting
-    paired comparison data using Stan easy.
+             family = "Pritikin",
+             role = c("aut", "cre"),
+             email = "jpritikin@pobox.com",
+             comment = c(ORCID = "0000-0002-9862-5484")),
+      person(given = "Daniel C.",
+             family = "Furr",
+             role = "ctb",
+             email = "danielcfurr@berkeley.edu"),
+      person(given = "Trustees of Columbia University",
+             role = "cph"))
+Description: Provides convenience functions and pre-programmed
+    Stan models related to the paired comparison factor model. Its purpose
+    is to make fitting paired comparison data using Stan easy.
 License: GPL (>= 3)
-Encoding: UTF-8
-LazyData: true
-LinkingTo: Rcpp (>= 0.12.0), RcppEigen (>= 0.3.3.3.0), StanHeaders (>= 2.18.0), BH (>= 1.66.0), rstan (>= 2.18.1)
-Imports: rstan (>= 2.18), reshape2, mvtnorm, igraph, loo
-Depends: R (>= 3.4), methods, Rcpp (>= 0.12.0)
+URL: https://github.com/jpritikin/pcFactorStan
+BugReports: https://github.com/jpritikin/pcFactorStan/issues
+Depends: 
+    R (>= 3.4),
+    methods,
+    Rcpp (>= 0.12.0)
+Imports: 
+    rstan (>= 2.18),
+    reshape2,
+    mvtnorm,
+    igraph,
+    loo,
+    lifecycle
 Suggests: 
     knitr,
     rmarkdown,
     testthat,
     shiny,
     ggplot2,
-    covr, qgraph
-SystemRequirements: GNU make
-VignetteBuilder: knitr
+    covr,
+    qgraph
+LinkingTo: 
+    Rcpp (>= 0.12.0),
+    RcppEigen (>= 0.3.3.3.0),
+    StanHeaders (>= 2.18.0),
+    BH (>= 1.66.0),
+    rstan (>= 2.18.1)
+VignetteBuilder: 
+    knitr
+RdMacros: 
+    lifecycle
+Encoding: UTF-8
+LazyData: true
 NeedsCompilation: yes
-URL: https://github.com/jpritikin/pcFactorStan
-BugReports: https://github.com/jpritikin/pcFactorStan/issues
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.2
+SystemRequirements: GNU make

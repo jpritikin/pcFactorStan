@@ -53,7 +53,7 @@ transformed data {
   }
 }
 parameters {
-  vector[totalThresholds] threshold;
+  vector<lower=0>[totalThresholds] threshold;
   matrix[NPA,NFACTORS] rawFactor;      // do not interpret, see factor
   vector[NPATHS] rawLoadings; // do not interpret, see factorLoadings
   matrix[NPA,NITEMS] rawUniqueTheta; // do not interpret, see uniqueTheta
@@ -99,7 +99,7 @@ transformed parameters {
   }
 }
 model {
-  threshold ~ normal(0, 2.0);
+  threshold ~ lognormal(0, 1.0);
   rawFactor[,1] ~ std_normal();
   rawLoadings ~ normal(0, 5.0);
   rawUnique ~ normal(0, 5.0);

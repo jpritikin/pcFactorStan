@@ -585,7 +585,6 @@ assertDataFitCompat <- function(dl, fit) {
 #' and \code{rbind} the results together.
 #'
 #' @template detail-response
-#' @template ref-masters1982
 #' @return
 #' A data.frame with the following columns:
 #' \describe{

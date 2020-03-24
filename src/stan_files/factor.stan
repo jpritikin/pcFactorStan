@@ -55,7 +55,7 @@ transformed data {
   }
 }
 parameters {
-  vector[totalThresholds] threshold;
+  vector<lower=0>[totalThresholds] threshold;
   corr_matrix[NFACTORS] Psi;
   matrix[NPA,NFACTORS] rawFactor;      // do not interpret, see factor
   vector[NPATHS] rawLoadings; // do not interpret, see factorLoadings
@@ -103,7 +103,7 @@ transformed parameters {
   }
 }
 model {
-  threshold ~ normal(0, 2.0);
+  threshold ~ lognormal(0, 1.0);
   {
     int px=1;
     for (cx in 1:(NFACTORS-1)) {

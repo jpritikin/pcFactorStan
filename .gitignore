@@ -1,4 +1,4 @@
-/man
+/man/*.Rd
 /staging
 .Rproj.user
 .Rhistory

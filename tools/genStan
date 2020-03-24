@@ -54,7 +54,7 @@ my $unidim_ll =
   }
 ';
 
-my $threshold_prior = 'threshold ~ normal(0, 2.0);';
+my $threshold_prior = 'threshold ~ lognormal(0, 1.0);';
 my $multivariateThresholdPrior = "$threshold_prior";
 my $alpha_prior = 'alpha ~ exponential(0.1);';
 
@@ -85,7 +85,7 @@ transformed data {
 }
 parameters {
   vector[NPA] theta;
-  vector[NTHRESH] threshold;
+  vector<lower=0>[NTHRESH] threshold;
   real<lower=0> $par;
 }
 transformed parameters {
@@ -142,7 +142,7 @@ transformed data {
 }
 
 my $multivariateThresholdParam =
-  'vector[totalThresholds] threshold;';
+  'vector<lower=0>[totalThresholds] threshold;';
 
 my $multivariateThresholdTParamDecl =
   'vector[totalThresholds] cumTh;';

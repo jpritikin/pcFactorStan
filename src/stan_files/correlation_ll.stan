@@ -36,7 +36,7 @@ transformed data {
   }
 }
 parameters {
-  vector[totalThresholds] threshold;
+  vector<lower=0>[totalThresholds] threshold;
   vector<lower=0>[NITEMS] alpha;
   matrix[NPA,NITEMS]      rawTheta;
   cholesky_factor_corr[NITEMS] rawThetaCorChol;
@@ -60,7 +60,7 @@ model {
   for (pa in 1:NPA) {
     rawTheta[pa,] ~ std_normal();
   }
-  threshold ~ normal(0, 2.0);
+  threshold ~ lognormal(0, 1.0);
   alpha ~ exponential(0.1);
   {
     int cmpStart = 1;

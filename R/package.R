@@ -7,7 +7,7 @@
 #' @description
 #' \pkg{pcFactorStan} makes it easy to fit the paired comparison
 #' factor model using \pkg{rstan}.
-#' 
+#'
 #' A user will generally want to use \code{\link{prepData}} and
 #' \code{\link{pcStan}} to fit a model.
 #'
@@ -22,6 +22,7 @@
 #'
 #' @useDynLib pcFactorStan, .registration = TRUE
 #' @importFrom Rcpp loadModule
+#' @importFrom lifecycle deprecate_soft
 #' @import methods
-#' 
+#'
 NULL
