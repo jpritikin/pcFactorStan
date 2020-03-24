@@ -38,14 +38,14 @@ test_that("loo", {
   trueCor <- cov2cor(rWishart(1, numItems, diag(numItems))[,,1])
   theta <- rmvnorm(length(palist), sigma=trueCor)
   dimnames(theta) <- list(palist, paste0('i', 1:numItems))
-  df1 <- generateItem(df1, theta, th=rep(0.5, 4))
+  df1 <- generateItem(df1, theta, th=rep(0.5, 4), alpha=1.25)
 
   df2 <- twoLevelGraph(palist, 30)
-  df2 <- generateItem(df2, -theta, th=rep(0.5, 4))
-  for (ix in 1:numItems) {
-    mask <- as.logical(rbinom(nrow(df2), 1, 1/3))
-    df2[mask,paste0('i', ix)] <- NA
-  }
+  df2 <- generateItem(df2, -theta, th=rep(0.5, 4), alpha=1.25)
+  # for (ix in 1:numItems) {
+  #   mask <- as.logical(rbinom(nrow(df2), 1, 1/3))
+  #   df2[mask,paste0('i', ix)] <- NA
+  # }
 
   df <- rbind(df1, df2)
 

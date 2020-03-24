@@ -40,7 +40,7 @@ test_that("prepCleanData", {
 
   df <- phyActFlowPropensity[,c(1,2,7)]
   dl <- prepCleanData(df)
-  expect_equivalent(c(table(dl$refresh)), c(223, 342))
+  expect_equivalent(c(table(dl$refresh)), c(216L, 70L, 25L, 21L, 10L))
   expect_equivalent(c(table(dl$weight)),
                     c(405L, 79L, 33L, 10L, 12L, 6L, 6L, 4L, 1L, 1L, 1L, 2L, 1L, 1L,  2L, 1L))
 })

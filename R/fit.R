@@ -93,16 +93,20 @@ prepCleanData <- function(df) {
   weight <- c()
   pick <- c()
   refresh <- c()
+  numOutcome <- c()
+  numRefresh <- 0L
   for (lx in 1:length(l)) {
     x <- l[[lx]]
     pt <- table(x$pick, useNA="no")
     if (length(pt) == 0) next
-    pa1 <- c(pa1, rep(unclass(x$pa1)[1], length(pt)))
-    pa2 <- c(pa2, rep(unclass(x$pa2)[1], length(pt)))
-    item <- c(item, rep(unclass(x$item)[1], length(pt)))
+    numRefresh <- numRefresh + 1L
+    pa1 <- c(pa1, unclass(x$pa1)[1])
+    pa2 <- c(pa2, unclass(x$pa2)[1])
+    item <- c(item, unclass(x$item)[1])
     weight <- c(weight, pt, use.names=FALSE)
     pick <- c(pick, as.integer(names(pt)))
-    refresh <- c(refresh, c(1, rep(0, length(pt)-1)))
+    refresh <- c(refresh, length(pt))
+    numOutcome <- c(numOutcome, sum(pt))
   }
 
   dl <- list(
@@ -120,7 +124,9 @@ prepCleanData <- function(df) {
     pa2=pa2,
     weight=weight,
     pick=pick,
+    numRefresh=numRefresh,
     refresh=refresh,
+    numOutcome=numOutcome,
     # multivariate data
     item=item
   )
@@ -506,16 +512,31 @@ toLoo <- function(fit, ...) {
 outlierTable <- function(data, x, threshold=0.5) {
   verifyIsPreppedData(data)
   ids <- pareto_k_ids(x, threshold)
-  loc <- c(1L, 1L+cumsum(data$weight))
-  offset <- findInterval(ids, loc)
+  xx <- data.frame(rx=rep(NA, data$N),
+                   px=rep(NA, data$N))
+  cmpStart <- 1L
+  cur <- 1L
+  for (rx in 1:data$numRefresh) {
+    len <- data$refresh[rx]
+    for (ox in cmpStart:(cmpStart + len - 1)) {
+      for (wx in 1:data$weight[ox]) {
+        xx[cur,'rx']=rx
+        xx[cur,'px']=ox
+        cur <- cur + 1L
+      }
+    }
+    cmpStart <- cmpStart + data$refresh[rx]
+  }
+  RX <- xx[ids,'rx']
+  PX <- xx[ids,'px']
   palist <- data$nameInfo$pa
   itemName <- data$nameInfo$item
-  df <- data.frame(pa1=data$pa1[offset],
-             pa2=data$pa2[offset],
-             item=data$item[offset],
-             pick=data$pick[offset],
+  df <- data.frame(pa1=data$pa1[RX],
+             pa2=data$pa2[RX],
+             item=data$item[RX],
+             pick=data$pick[PX],
              k=pareto_k_values(x)[ids])
-  df <- df[!duplicated(offset),]
+  df <- df[!duplicated(PX),]
   for (k in paste0('pa',1:2)) {
     levels(df[[k]]) <- palist
     class(df[[k]]) <- 'factor'
@@ -647,7 +668,7 @@ withoutIndex <- function(name) {
 }
 
 #' Produce data suitable for plotting parameter estimates
-#' 
+#'
 #' @template args-fit
 #' @param pars a vector of parameter names
 #' @param label column name for \code{nameVec}
@@ -678,7 +699,7 @@ parInterval <- function(fit, pars, nameVec,
 }
 
 #' Produce data suitable for plotting parameter distributions
-#' 
+#'
 #' @template args-fit
 #' @param pars a vector of parameter names
 #' @param label column name for \code{nameVec}

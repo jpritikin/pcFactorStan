@@ -1,12 +1,13 @@
 #include /pre/license.stan
 functions {
-#include /functions/cmp_prob2.stan
+#include /functions/pairwise.stan
 }
 data {
   // dimensions
-  int<lower=1> NPA;             // number of players or objects or things
-  int<lower=1> NCMP;            // number of unique comparisons
-  int<lower=1> N;               // number of observations
+  int<lower=1> NPA;             // worths or players or objects or things
+  int<lower=1> NCMP;            // unique comparisons
+  int<lower=1> N;               // observations
+  int<lower=1> numRefresh;      // when change in item/pa1/pa2
   int<lower=1> NITEMS;
   int<lower=1> NTHRESH[NITEMS];         // number of thresholds
   int<lower=1> TOFFSET[NITEMS];
@@ -17,19 +18,27 @@ data {
   int<lower=1> NPATHS;
   int factorItemPath[2,NPATHS];  // 1 is factor index, 2 is item index
   // response data
-  int<lower=1, upper=NPA> pa1[NCMP];        // PA1 for observation N
-  int<lower=1, upper=NPA> pa2[NCMP];        // PA2 for observation N
+  int<lower=1, upper=NPA> pa1[numRefresh];
+  int<lower=1, upper=NPA> pa2[numRefresh];
   int weight[NCMP];
   int pick[NCMP];
-  int refresh[NCMP];
-  int item[NCMP];
+  int refresh[numRefresh];
+  int numOutcome[numRefresh];
+  int item[numRefresh];
 }
 transformed data {
   int totalThresholds = sum(NTHRESH);
   int rcat[NCMP];
   vector[NPATHS] pathScalePrior;
-  for (cmp in 1:NCMP) {
-    rcat[cmp] = pick[cmp] + NTHRESH[item[cmp]] + 1;
+  {
+    int cmpStart = 0;
+    for (rx in 1:numRefresh) {
+      int ix = item[rx];
+      for (cmp in 1:refresh[rx]) {
+        rcat[cmpStart + cmp] = pick[cmpStart + cmp] + NTHRESH[ix] + 1;
+      }
+      cmpStart += refresh[rx];
+    }
   }
   for (px in 1:NPATHS) {
     int fx = factorItemPath[1,px];
@@ -90,10 +99,6 @@ transformed parameters {
   }
 }
 model {
-  vector[max(NTHRESH)*2 + 1] prob;
-  int probSize;
-  int px=1;
-
   threshold ~ normal(0, 2.0);
   rawFactor[,1] ~ std_normal();
   rawLoadings ~ normal(0, 5.0);
@@ -101,20 +106,16 @@ model {
   for (ix in 1:NITEMS) {
     rawUniqueTheta[,ix] ~ std_normal();
   }
-  for (cmp in 1:NCMP) {
-    if (refresh[cmp]) {
-      int ix = item[cmp];
+  {
+    int cmpStart = 1;
+    for (rx in 1:numRefresh) {
+      int ix = item[rx];
       int from = TOFFSET[ix];
       int to = TOFFSET[ix] + NTHRESH[ix] - 1;
-      probSize = (2*NTHRESH[ix]+1);
-      prob[:probSize] = cmp_probs(scale[ix], alpha[ix],
-               theta[pa1[cmp], ix],
-               theta[pa2[cmp], ix], cumTh[from:to]);
-    }
-    if (weight[cmp] == 1) {
-      target += categorical_lpmf(rcat[cmp] | prob[:probSize]);
-    } else {
-      target += weight[cmp] * categorical_lpmf(rcat[cmp] | prob[:probSize]);
+      target += pairwise_logprob(rcat, weight, cmpStart, refresh[rx],
+                                 scale[ix], alpha[ix], theta[pa1[rx], ix],
+                                 theta[pa2[rx], ix], cumTh[from:to]);
+      cmpStart += refresh[rx];
     }
   }
   target += normal_lpdf(logit(0.5 + rawPathProp/2.0) | 0, pathScalePrior);

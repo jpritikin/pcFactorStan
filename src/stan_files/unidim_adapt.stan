@@ -1,23 +1,26 @@
 #include /pre/license.stan
 functions {
-#include /functions/cmp_prob1.stan
+#include /functions/pairwise.stan
 }
 data {
   // dimensions
-  int<lower=1> NPA;             // number of players or objects or things
-  int<lower=1> NCMP;            // number of unique comparisons
-  int<lower=1> N;               // number of observations
+  int<lower=1> NPA;             // worths or players or objects or things
+  int<lower=1> NCMP;            // unique comparisons
+  int<lower=1> N;               // observations
+  int<lower=1> numRefresh;      // when change in item/pa1/pa2
   int<lower=1> NTHRESH;         // number of thresholds
   real varCorrection;
   // response data
-  int<lower=1, upper=NPA> pa1[NCMP];        // PA1 for observation N
-  int<lower=1, upper=NPA> pa2[NCMP];        // PA2 for observation N
+  int<lower=1, upper=NPA> pa1[numRefresh];
+  int<lower=1, upper=NPA> pa2[numRefresh];
   int weight[NCMP];
   int pick[NCMP];
-  int refresh[NCMP];
+  int refresh[numRefresh];
+  int numOutcome[numRefresh];
 }
 transformed data {
   int rcat[NCMP];
+  real alpha = 1.0;
 
   for (cmp in 1:NCMP) {
     rcat[cmp] = pick[cmp] + NTHRESH + 1;
@@ -33,18 +36,16 @@ transformed parameters {
   real scale = (sd(theta) ^ varCorrection)/1.749;
 }
 model {
-  vector[NTHRESH*2 + 1] prob;
   sigma ~ lognormal(1, 1);
   theta ~ normal(0, sigma);
   threshold ~ normal(0, 2.0);
-  for (cmp in 1:NCMP) {
-    if (refresh[cmp]) {
-      prob = cmp_probs(scale, theta[pa1[cmp]], theta[pa2[cmp]], cumTh);
-    }
-    if (weight[cmp] == 1) {
-      target += categorical_lpmf(rcat[cmp] | prob);
-    } else {
-      target += weight[cmp] * categorical_lpmf(rcat[cmp] | prob);
+
+  {
+    int cmpStart = 1;
+    for (rx in 1:numRefresh) {
+      target += pairwise_logprob(rcat, weight, cmpStart, refresh[rx],
+                                 scale, alpha, theta[pa1[rx]], theta[pa2[rx]], cumTh);
+      cmpStart += refresh[rx];
     }
   }
 }

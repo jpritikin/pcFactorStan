@@ -1,45 +1,55 @@
 #!/usr/bin/perl
 
+# pcFactorStan is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# pcFactorStan is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with pcFactorStan.  If not, see <http://www.gnu.org/licenses/>.
+
 use Modern::Perl '2018';
-use Fatal qw(open);
+use Fatal qw(open rename unlink);
+use File::Compare;
 
 die "Must be run from top level" if !-e './tools/genStan';
 
-my $dest = 'src/stan_files';
-
-my $itemModel = 'functions {
-#include /functions/cmp_prob2.stan
-}
-';
-
 my $commonData =
 '  // dimensions
-  int<lower=1> NPA;             // number of players or objects or things
-  int<lower=1> NCMP;            // number of unique comparisons
-  int<lower=1> N;               // number of observations';
+  int<lower=1> NPA;             // worths or players or objects or things
+  int<lower=1> NCMP;            // unique comparisons
+  int<lower=1> N;               // observations
+  int<lower=1> numRefresh;      // when change in item/pa1/pa2';
 
 my $responseData =
 '  // response data
-  int<lower=1, upper=NPA> pa1[NCMP];        // PA1 for observation N
-  int<lower=1, upper=NPA> pa2[NCMP];        // PA2 for observation N
+  int<lower=1, upper=NPA> pa1[numRefresh];
+  int<lower=1, upper=NPA> pa2[numRefresh];
   int weight[NCMP];
   int pick[NCMP];
-  int refresh[NCMP];';
+  int refresh[numRefresh];
+  int numOutcome[numRefresh];';
 
 my $unidim_ll =
-'  vector[NTHRESH*2 + 1] prob;
-  vector[N] log_lik;
-  int cur = 1;
+'  real log_lik[N];
 
-  for (cmp in 1:NCMP) {
-    real ll;
-    if (refresh[cmp]) {
-      prob = cmp_probs(scale, alpha, theta[pa1[cmp]], theta[pa2[cmp]], cumTh);
-    }
-    ll = categorical_lpmf(rcat[cmp] | prob);
-    for (wx in 1:weight[cmp]) {
-      log_lik[cur] = ll;
-      cur = cur + 1;
+  {
+    int cmpStart = 1;
+    int cur = 1;
+
+    for (rx in 1:numRefresh) {
+      int nout = numOutcome[rx];
+      int last = cur + nout - 1;
+      log_lik[cur:last] =
+        pairwise_loo(rcat, weight, nout, cmpStart, refresh[rx],
+                     scale, alpha, theta[pa1[rx]], theta[pa2[rx]], cumTh);
+      cmpStart += refresh[rx];
+      cur += numOutcome[rx];
     }
   }
 ';
@@ -51,12 +61,12 @@ my $alpha_prior = 'alpha ~ exponential(0.1);';
 sub mkUnidim {
     my ($adapt, $ll) = @_;
     my $data = $adapt? "varCorrection" : "scale";
+    my $xdata = $adapt? "\n  real alpha = 1.0;" : '';
     my $par = $adapt? "sigma" : "alpha";
     my $scaleDef = $adapt? "
   real scale = (sd(theta) ^ varCorrection)/1.749;" : "";
     my $theta_sd = $adapt? "sigma" : "1.0";
     my $prior = $adapt? 'sigma ~ lognormal(1, 1);' : $alpha_prior;
-    my $cmp_alpha = $adapt? '' : ', alpha';
     my $llBody = $ll? $unidim_ll : '';
 
     my $unidim =
@@ -67,7 +77,7 @@ $commonData
 $responseData
 }
 transformed data {
-  int rcat[NCMP];
+  int rcat[NCMP];$xdata
 
   for (cmp in 1:NCMP) {
     rcat[cmp] = pick[cmp] + NTHRESH + 1;
@@ -82,18 +92,16 @@ transformed parameters {
   vector[NTHRESH] cumTh = cumulative_sum(threshold);$scaleDef
 }
 model {
-  vector[NTHRESH*2 + 1] prob;
   $prior
   theta ~ normal(0, $theta_sd);
   $threshold_prior
-  for (cmp in 1:NCMP) {
-    if (refresh[cmp]) {
-      prob = cmp_probs(scale$cmp_alpha, theta[pa1[cmp]], theta[pa2[cmp]], cumTh);
-    }
-    if (weight[cmp] == 1) {
-      target += categorical_lpmf(rcat[cmp] | prob);
-    } else {
-      target += weight[cmp] * categorical_lpmf(rcat[cmp] | prob);
+
+  {
+    int cmpStart = 1;
+    for (rx in 1:numRefresh) {
+      target += pairwise_logprob(rcat, weight, cmpStart, refresh[rx],
+                                 scale, alpha, theta[pa1[rx]], theta[pa2[rx]], cumTh);
+      cmpStart += refresh[rx];
     }
   }
 }
@@ -115,13 +123,20 @@ $commonData
   int<lower=1> TOFFSET[NITEMS];
   vector[NITEMS] scale;$data
 $responseData
-  int item[NCMP];
+  int item[numRefresh];
 }
 transformed data {
   int totalThresholds = sum(NTHRESH);
   int rcat[NCMP];$tdataDecl
-  for (cmp in 1:NCMP) {
-    rcat[cmp] = pick[cmp] + NTHRESH[item[cmp]] + 1;
+  {
+    int cmpStart = 0;
+    for (rx in 1:numRefresh) {
+      int ix = item[rx];
+      for (cmp in 1:refresh[rx]) {
+        rcat[cmpStart + cmp] = pick[cmpStart + cmp] + NTHRESH[ix] + 1;
+      }
+      cmpStart += refresh[rx];
+    }
   }$tdata
 }];
 }
@@ -139,60 +154,49 @@ my $multivariateThresholdTParam =
     cumTh[from:to] = cumulative_sum(threshold[from:to]);
   }';
 
-my $multivariateQuickLikelihoodDecl =
-  'vector[max(NTHRESH)*2 + 1] prob;
-  int probSize;';
-
 my $multivariateQuickLikelihood =
-'for (cmp in 1:NCMP) {
-    if (refresh[cmp]) {
-      int ix = item[cmp];
+'{
+    int cmpStart = 1;
+    for (rx in 1:numRefresh) {
+      int ix = item[rx];
       int from = TOFFSET[ix];
       int to = TOFFSET[ix] + NTHRESH[ix] - 1;
-      probSize = (2*NTHRESH[ix]+1);
-      prob[:probSize] = cmp_probs(scale[ix], alpha[ix],
-               theta[pa1[cmp], ix],
-               theta[pa2[cmp], ix], cumTh[from:to]);
-    }
-    if (weight[cmp] == 1) {
-      target += categorical_lpmf(rcat[cmp] | prob[:probSize]);
-    } else {
-      target += weight[cmp] * categorical_lpmf(rcat[cmp] | prob[:probSize]);
+      target += pairwise_logprob(rcat, weight, cmpStart, refresh[rx],
+                                 scale[ix], alpha[ix], theta[pa1[rx], ix],
+                                 theta[pa2[rx], ix], cumTh[from:to]);
+      cmpStart += refresh[rx];
     }
   }';
 
-my $multivariateLikelihoodDecl =
+my $multivariateLooDecl =
   '
-  vector[max(NTHRESH)*2 + 1] prob;
-  int probSize;
-  vector[N] log_lik;
-  int cur = 1;
+  real log_lik[N];
 ';
 
-my $multivariateLikelihood = '
+my $multivariateLoo = '
 
-  for (cmp in 1:NCMP) {
-    real ll;
-    if (refresh[cmp]) {
-      int ix = item[cmp];
+  {
+    int cmpStart = 1;
+    int cur = 1;
+    for (rx in 1:numRefresh) {
+      int ix = item[rx];
       int from = TOFFSET[ix];
       int to = TOFFSET[ix] + NTHRESH[ix] - 1;
-      probSize = (2*NTHRESH[ix]+1);
-      prob[:probSize] = cmp_probs(scale[ix], alpha[ix],
-               theta[pa1[cmp], ix],
-               theta[pa2[cmp], ix], cumTh[from:to]);
-    }
-    ll = categorical_lpmf(rcat[cmp] | prob[:probSize]);
-    for (wx in 1:weight[cmp]) {
-      log_lik[cur] = ll;
-      cur = cur + 1;
+      int nout = numOutcome[rx];
+      int last = cur + nout - 1;
+      log_lik[cur:last] =
+        pairwise_loo(rcat, weight, nout, cmpStart, refresh[rx],
+                     scale[ix], alpha[ix],
+                     theta[pa1[rx],ix], theta[pa2[rx],ix], cumTh[from:to]);
+      cmpStart += refresh[rx];
+      cur += numOutcome[rx];
     }
   }';
 
 sub mkCorModel {
     my ($ll) = @_;
-    my $llDecl = $ll? $multivariateLikelihoodDecl : '';
-    my $llBody = $ll? $multivariateLikelihood : '';
+    my $llDecl = $ll? $multivariateLooDecl : '';
+    my $llBody = $ll? $multivariateLoo : '';
     mvtDataCommon().
 qq[
 parameters {
@@ -212,8 +216,6 @@ transformed parameters {
   $multivariateThresholdTParam
 }
 model {
-  $multivariateQuickLikelihoodDecl
-
   rawThetaCorChol ~ lkj_corr_cholesky(2);
   for (pa in 1:NPA) {
     rawTheta[pa,] ~ std_normal();
@@ -231,8 +233,8 @@ generated quantities {$llDecl
 
 sub mkFactorModel {
     my ($ll, $psi) = @_;
-    my $llDecl = $ll? $multivariateLikelihoodDecl : '';
-    my $llBody = $ll? $multivariateLikelihood : '';
+    my $llDecl = $ll? $multivariateLooDecl : '';
+    my $llBody = $ll? $multivariateLoo : '';
 
     my $psiData = '';
     my $psiParam = '';
@@ -248,10 +250,13 @@ sub mkFactorModel {
 	$psiTparam = '
   cholesky_factor_corr[NFACTORS] CholPsi = cholesky_decompose(Psi);';
 	$latentPrior = '
-  for (cx in 1:(NFACTORS-1)) {
-    for (rx in (cx+1):NFACTORS) {
-      target += normal_lpdf(logit(0.5 + Psi[rx,cx]/2.0) | 0, psiScalePrior[px]);
-      px += 1;
+  {
+    int px=1;
+    for (cx in 1:(NFACTORS-1)) {
+      for (rx in (cx+1):NFACTORS) {
+        target += normal_lpdf(logit(0.5 + Psi[rx,cx]/2.0) | 0, psiScalePrior[px]);
+        px += 1;
+      }
     }
   }
   for (xx in 1:NPA) {
@@ -323,9 +328,6 @@ transformed parameters {
   }
 }
 model {
-  $multivariateQuickLikelihoodDecl
-  int px=1;
-
   $multivariateThresholdPrior$latentPrior
   rawLoadings ~ normal(0, 5.0);
   rawUnique ~ normal(0, 5.0);
@@ -378,60 +380,62 @@ generated quantities {$llDecl
 ];
 }
 
+sub openAndPreamble {
+    my ($f) = @_;
+    open my $fh, ">src/stan_files/$f.stan.new";
+    print $fh '#include /pre/license.stan
+functions {
+#include /functions/pairwise.stan
+}
+';
+    $fh
+}
+
 {
-    open my $fh, ">$dest/unidim.stan";
-    print $fh "#include /pre/license.stan\n";
-    print $fh $itemModel;
+    my $fh = openAndPreamble('unidim');
     print $fh mkUnidim(0,0);
 }
 {
-    open my $fh, ">$dest/unidim_adapt.stan";
-    print $fh "#include /pre/license.stan\n";
-    print $fh 'functions {
-#include /functions/cmp_prob1.stan
-}
-';
+    my $fh = openAndPreamble('unidim_adapt');
     print $fh mkUnidim(1,0);
 }
 {
-    open my $fh, ">$dest/unidim_ll.stan";
-    print $fh "#include /pre/license.stan\n";
-    print $fh $itemModel;
+    my $fh = openAndPreamble('unidim_ll');
     print $fh mkUnidim(0,1);
 }
 {
-    open my $fh, ">$dest/correlation.stan";
-    print $fh "#include /pre/license.stan\n";
-    print $fh $itemModel;
+    my $fh = openAndPreamble('correlation');
     print $fh mkCorModel(0);
 }
 {
-    open my $fh, ">$dest/correlation_ll.stan";
-    print $fh "#include /pre/license.stan\n";
-    print $fh $itemModel;
+    my $fh = openAndPreamble('correlation_ll');
     print $fh mkCorModel(1);
 }
 {
-    open my $fh, ">$dest/factor1.stan";
-    print $fh "#include /pre/license.stan\n";
-    print $fh $itemModel;
+    my $fh = openAndPreamble('factor1');
     print $fh mkFactorModel(0,0);
 }
 {
-    open my $fh, ">$dest/factor1_ll.stan";
-    print $fh "#include /pre/license.stan\n";
-    print $fh $itemModel;
+    my $fh = openAndPreamble('factor1_ll');
     print $fh mkFactorModel(1,0);
 }
 {
-    open my $fh, ">$dest/factor.stan";
-    print $fh "#include /pre/license.stan\n";
-    print $fh $itemModel;
+    my $fh = openAndPreamble('factor');
     print $fh mkFactorModel(0,1);
 }
 {
-    open my $fh, ">$dest/factor_ll.stan";
-    print $fh "#include /pre/license.stan\n";
-    print $fh $itemModel;
+    my $fh = openAndPreamble('factor_ll');
     print $fh mkFactorModel(1,1);
+}
+
+for my $f (qw(unidim unidim_adapt unidim_ll
+ correlation correlation_ll factor1 factor1_ll
+ factor factor_ll)) {
+    my $old = "src/stan_files/$f.stan";
+    my $new = "$old.new";
+    if (-e $old && compare($old, $new) == 0) {
+	unlink($new)
+    } else {
+	rename($new, $old)
+    }
 }

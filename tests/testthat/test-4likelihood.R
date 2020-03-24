@@ -107,3 +107,4 @@ test_that("calibrateItems", {
   expect_equal(result[1:2,'scale'], c(.469, .535),
                tolerance=.01, scale=1)
 })
+

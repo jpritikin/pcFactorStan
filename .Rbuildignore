@@ -5,3 +5,4 @@
 ^codecov\.yml$
 ^vignettes/brief-manual_cache/
 .Rhistory
+.editorconfig
