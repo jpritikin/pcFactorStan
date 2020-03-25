@@ -8,6 +8,8 @@ data {
   int<lower=1> NCMP;            // unique comparisons
   int<lower=1> N;               // observations
   int<lower=1> numRefresh;      // when change in item/pa1/pa2
+  real alphaShape;
+  real thresholdShape;
   int<lower=1> NTHRESH;         // number of thresholds
   real varCorrection;
   // response data
@@ -38,7 +40,7 @@ transformed parameters {
 model {
   sigma ~ lognormal(1, 1);
   theta ~ normal(0, sigma);
-  threshold ~ lognormal(0, 1.0);
+  threshold ~ inv_gamma(thresholdShape, .05*(1+thresholdShape));
 
   {
     int cmpStart = 1;

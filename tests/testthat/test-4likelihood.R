@@ -23,12 +23,12 @@ test_that("unidim", {
   dl$varCorrection <- 2.0
   m1 <- findModel("unidim_adapt")
   f1 <- sampling(m1, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
-  expect_equal(get_logposterior(f1)[[1]], -6523.804, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f1)[[1]], -6529.149, tolerance=1e-2, scale=1)
 
   dl$scale <- 1.0
   m2 <- findModel("unidim_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
-  expect_equal(get_logposterior(f2)[[1]], -14711.76, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -14735.99, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
                c(-31.625, -23.091, -17.317, 0, 0), tolerance=1e-2, scale=1)
@@ -40,7 +40,7 @@ test_that("correlation", {
   dl$scale <- rnorm(dl$NITEMS, sd=.2)
   m2 <- findModel("correlation_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
-  expect_equal(get_logposterior(f2)[[1]], -52848.63, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -53436.15, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
                c(-23.089, -4.063, -2.05, -0.905, 0), tolerance=1e-2, scale=1)
@@ -54,7 +54,7 @@ test_that("factor", {
   dl <- prepSingleFactorModel(dl, .2)
   m2 <- findModel("factor1_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
-  expect_equal(get_logposterior(f2)[[1]], -60690.54, tolerance=1e-1, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -60668.11, tolerance=1e-1, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
                c(-18.951, -5.443, -2.798, -1.237, 0), tolerance=1e-2, scale=1)
@@ -80,7 +80,7 @@ test_that("mixed thresholds", {
   dl$scale <- scaleSave
   m2 <- findModel("correlation_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
-  expect_equal(get_logposterior(f2)[[1]], -4344.113, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -4556.698, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
                c(-15.115, -3.481, -1.974, -1.281, -0.301), tolerance=1e-2, scale=1)

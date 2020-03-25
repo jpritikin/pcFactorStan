@@ -8,6 +8,8 @@ data {
   int<lower=1> NCMP;            // unique comparisons
   int<lower=1> N;               // observations
   int<lower=1> numRefresh;      // when change in item/pa1/pa2
+  real alphaShape;
+  real thresholdShape;
   int<lower=1> NTHRESH;         // number of thresholds
   real scale;
   // response data
@@ -34,9 +36,9 @@ transformed parameters {
   vector[NTHRESH] cumTh = cumulative_sum(threshold);
 }
 model {
-  alpha ~ exponential(0.1);
+  alpha ~ inv_gamma(alphaShape, 1.749*(1+alphaShape));
   theta ~ normal(0, 1.0);
-  threshold ~ lognormal(0, 1.0);
+  threshold ~ inv_gamma(thresholdShape, .05*(1+thresholdShape));
 
   {
     int cmpStart = 1;

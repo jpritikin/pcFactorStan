@@ -24,7 +24,9 @@ my $commonData =
   int<lower=1> NPA;             // worths or players or objects or things
   int<lower=1> NCMP;            // unique comparisons
   int<lower=1> N;               // observations
-  int<lower=1> numRefresh;      // when change in item/pa1/pa2';
+  int<lower=1> numRefresh;      // when change in item/pa1/pa2
+  real alphaShape;
+  real thresholdShape;';
 
 my $responseData =
 '  // response data
@@ -54,9 +56,11 @@ my $unidim_ll =
   }
 ';
 
-my $threshold_prior = 'threshold ~ lognormal(0, 1.0);';
-my $multivariateThresholdPrior = "$threshold_prior";
-my $alpha_prior = 'alpha ~ exponential(0.1);';
+my $threshold_prior =
+  'threshold ~ inv_gamma(thresholdShape, .05*(1+thresholdShape));';
+
+my $alpha_prior =
+  'alpha ~ inv_gamma(alphaShape, 1.749*(1+alphaShape));';
 
 sub mkUnidim {
     my ($adapt, $ll) = @_;
@@ -220,7 +224,7 @@ model {
   for (pa in 1:NPA) {
     rawTheta[pa,] ~ std_normal();
   }
-  $multivariateThresholdPrior
+  $threshold_prior
   $alpha_prior
   $multivariateQuickLikelihood
 }
@@ -328,7 +332,7 @@ transformed parameters {
   }
 }
 model {
-  $multivariateThresholdPrior$latentPrior
+  $threshold_prior$latentPrior
   rawLoadings ~ normal(0, 5.0);
   rawUnique ~ normal(0, 5.0);
   for (ix in 1:NITEMS) {

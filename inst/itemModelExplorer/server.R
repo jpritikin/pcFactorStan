@@ -61,7 +61,7 @@ calcProb <- function(newModel, par, theta) {
 shinyServer(function(input, output, session) {
   default <- itemModelExplorer.default
 
-  initialValues <- c(discrimination=1, scale=default$scaleValue)
+  initialValues <- c(discrimination=1.749, scale=default$scaleValue)
   for (tx in 1:length(default$thresholds)) {
     initialValues[[paste0('th',tx)]] <- default$thresholds[tx]
   }

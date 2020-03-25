@@ -10,5 +10,5 @@ if (!exists("itemModelExplorer.default")) {
   itemModelExplorer.default <-
     list(scaleValue = 1,
          thresholds = c(.8, 1.6),
-         discrimination = 1)
+         discrimination = 1.749)
 }

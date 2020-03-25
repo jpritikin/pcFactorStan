@@ -8,6 +8,8 @@ data {
   int<lower=1> NCMP;            // unique comparisons
   int<lower=1> N;               // observations
   int<lower=1> numRefresh;      // when change in item/pa1/pa2
+  real alphaShape;
+  real thresholdShape;
   int<lower=1> NITEMS;
   int<lower=1> NTHRESH[NITEMS];         // number of thresholds
   int<lower=1> TOFFSET[NITEMS];
@@ -99,7 +101,7 @@ transformed parameters {
   }
 }
 model {
-  threshold ~ lognormal(0, 1.0);
+  threshold ~ inv_gamma(thresholdShape, .05*(1+thresholdShape));
   rawFactor[,1] ~ std_normal();
   rawLoadings ~ normal(0, 5.0);
   rawUnique ~ normal(0, 5.0);

@@ -8,6 +8,8 @@ data {
   int<lower=1> NCMP;            // unique comparisons
   int<lower=1> N;               // observations
   int<lower=1> numRefresh;      // when change in item/pa1/pa2
+  real alphaShape;
+  real thresholdShape;
   int<lower=1> NITEMS;
   int<lower=1> NTHRESH[NITEMS];         // number of thresholds
   int<lower=1> TOFFSET[NITEMS];
@@ -60,8 +62,8 @@ model {
   for (pa in 1:NPA) {
     rawTheta[pa,] ~ std_normal();
   }
-  threshold ~ lognormal(0, 1.0);
-  alpha ~ exponential(0.1);
+  threshold ~ inv_gamma(thresholdShape, .05*(1+thresholdShape));
+  alpha ~ inv_gamma(alphaShape, 1.749*(1+alphaShape));
   {
     int cmpStart = 1;
     for (rx in 1:numRefresh) {
