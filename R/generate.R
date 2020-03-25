@@ -462,20 +462,22 @@ twoLevelGraph <- function(name, N, shape1=0.8, shape2=0.5) {
 
   # Generate all comparisons between 'a' and others to ensure
   # that there are no disconnected vertices.
-  for (rx in 1:(length(name)-1)) {
+  for (rx in 1:min(N,(length(name)-1))) {
     df[rx,'pa1'] <- name[1]
     ox <- 1 + (rx %% length(name))
     df[rx,'pa2'] <- name[ox]
   }
-  for (rx in length(name):nrow(df)) {
-    pick <- 1+floor(sort(c(rbeta(1, shape1, 1),
-                           rbeta(1, shape2, 1))) * length(name))
-    if (pick[1] == pick[2]) {
-      if (pick[1] > 1) pick[1] <- pick[1] - 1
-      else pick[2] <- pick[2] + 1
+  if (N >= length(name)) {
+    for (rx in length(name):nrow(df)) {
+      pick <- 1+floor(sort(c(rbeta(1, shape1, 1),
+                             rbeta(1, shape2, 1))) * length(name))
+      if (pick[1] == pick[2]) {
+        if (pick[1] > 1) pick[1] <- pick[1] - 1
+        else pick[2] <- pick[2] + 1
+      }
+      df[rx,'pa1'] <- name[pick[1]]
+      df[rx,'pa2'] <- name[pick[2]]
     }
-    df[rx,'pa1'] <- name[pick[1]]
-    df[rx,'pa2'] <- name[pick[2]]
   }
   df <- objectNamesToFactor(name, df)
   df

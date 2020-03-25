@@ -58,6 +58,10 @@ test_that("generateCovItems", {
 
 test_that("generateSingleFactorItems", {
   set.seed(1)
+  df <- expect_warning(twoLevelGraph(letters[1:10], 4),
+                 "Sample size too small")
+  expect_equal(nrow(df), 4)
+
   df <- twoLevelGraph(letters[1:10], 100)
   df <- generateSingleFactorItems(df, 3)
 
