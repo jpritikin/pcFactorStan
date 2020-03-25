@@ -3,6 +3,6 @@
 ^\.travis\.yml$
 ^man-roxygen
 ^codecov\.yml$
-^vignettes/brief-manual_cache/
+^vignettes/*cache/
 .Rhistory
 .editorconfig
