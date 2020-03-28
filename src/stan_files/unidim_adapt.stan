@@ -22,7 +22,7 @@ data {
 }
 transformed data {
   int rcat[NCMP];
-  real alpha = 1.0;
+  real alpha = 1.749;
 
   for (cmp in 1:NCMP) {
     rcat[cmp] = pick[cmp] + NTHRESH + 1;
@@ -35,7 +35,7 @@ parameters {
 }
 transformed parameters {
   vector[NTHRESH] cumTh = cumulative_sum(threshold);
-  real scale = (sd(theta) ^ varCorrection)/1.749;
+  real scale = sd(theta) ^ varCorrection;
 }
 model {
   sigma ~ lognormal(1, 1);

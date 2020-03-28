@@ -10,7 +10,7 @@ test_that("responseCurve", {
   m1 <- findModel("unidim")
   f1 <- sampling(m1, dl1, chains=1, cores=0, iter=100, refresh=0)
   rc <- responseCurve(dl1, f1, letters[1:5], samples=2, by=1)
-  expect_equal(nrow(rc), 130)
+  expect_equal(nrow(rc), 50)
   expect_true(all(diff(subset(rc, response=='a' & sample == 1)$prob) < 0))
   expect_true(all(diff(subset(rc, response=='e' & sample == 2)$prob) > 0))
 
@@ -33,7 +33,7 @@ test_that("responseCurve", {
   m2 <- findModel("correlation")
   f2 <- sampling(m2, dl2, chains=1, cores=0, iter=50, refresh=0)
   rc <- responseCurve(dl2, f2, letters[1:5], 'predict', samples=2, by=1)
-  expect_equal(nrow(rc), 130)
+  expect_equal(nrow(rc), 50)
   expect_true(all(diff(subset(rc, response=='a' & sample == 1)$prob) < 0))
   expect_true(all(diff(subset(rc, response=='e' & sample == 2)$prob) > 0))
 
@@ -53,7 +53,7 @@ test_that("responseCurve", {
   f3 <- sampling(findModel("factor1"), dl2, chains=1,
                  cores=0, iter=50, refresh=0)
   rc <- responseCurve(dl2, f3, letters[1:5], 'predict', samples=2, by=1)
-  expect_equal(nrow(rc), 130)
+  expect_equal(nrow(rc), 50)
   expect_true(all(diff(subset(rc, response=='a' & sample == 1)$prob) < 0))
   expect_true(all(diff(subset(rc, response=='e' & sample == 2)$prob) > 0))
 })

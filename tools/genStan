@@ -65,10 +65,10 @@ my $alpha_prior =
 sub mkUnidim {
     my ($adapt, $ll) = @_;
     my $data = $adapt? "varCorrection" : "scale";
-    my $xdata = $adapt? "\n  real alpha = 1.0;" : '';
+    my $xdata = $adapt? "\n  real alpha = 1.749;" : '';
     my $par = $adapt? "sigma" : "alpha";
     my $scaleDef = $adapt? "
-  real scale = (sd(theta) ^ varCorrection)/1.749;" : "";
+  real scale = sd(theta) ^ varCorrection;" : "";
     my $theta_sd = $adapt? "sigma" : "1.0";
     my $prior = $adapt? 'sigma ~ lognormal(1, 1);' : $alpha_prior;
     my $llBody = $ll? $unidim_ll : '';

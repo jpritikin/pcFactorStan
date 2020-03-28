@@ -603,7 +603,7 @@ assertDataFitCompat <- function(dl, fit) {
 #' @examples
 #' \donttest{ vignette('manual', 'pcFactorStan') }
 responseCurve <- function(dl, fit, responseNames, item=dl$nameInfo$item,
-                          samples=100, from=-6, to=-from, by=.1) {
+                          samples=100, from=-2, to=-from, by=.025) {
   assertDataFitCompat(dl, fit)
   pd <- fit@par_dims
   itemIndex <- match(item, dl$nameInfo$item)
@@ -617,11 +617,12 @@ responseCurve <- function(dl, fit, responseNames, item=dl$nameInfo$item,
                 paste(item[mismatch], collapse=', ')))
   }
   grid <- seq(from,to,by)
-  df <- expand.grid(response=responseNames, worthDiff=grid,
+  df <- expand.grid(response=responseNames, worthDiff=1:length(grid),
                     item=item, sample=1:samples, prob=NA)
   pick <- c()
   for (i1 in item) {
     ii <- match(i1, dl$nameInfo$item)
+    grid <- seq(from,to,by) / dl$scale[ii]
     thrInd <- dl$TOFFSET[ii] + 1:dl$NTHRESH[ii] - 1L
     thrData <- extract(fit, pars=paste0("threshold[",thrInd,"]"))
     if ('alpha' %in% names(pd)) {
@@ -649,6 +650,7 @@ responseCurve <- function(dl, fit, responseNames, item=dl$nameInfo$item,
                   sapply(thrData, function(x) x[pick[sx]]))
       })
       df[mask, 'prob'] <- c(p1)
+      df[mask, 'worthDiff'] <- kronecker(grid, rep(1, nrow(p1)))
     }
   }
   df$responseSample <-
