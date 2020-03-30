@@ -9,7 +9,6 @@ data {
   int<lower=1> N;               // observations
   int<lower=1> numRefresh;      // when change in item/pa1/pa2
   real alphaShape;
-  real thresholdShape;
   int<lower=1> NITEMS;
   int<lower=1> NTHRESH[NITEMS];         // number of thresholds
   int<lower=1> TOFFSET[NITEMS];
@@ -38,12 +37,13 @@ transformed data {
   }
 }
 parameters {
-  vector<lower=0>[totalThresholds] threshold;
+  vector<lower=0,upper=1>[totalThresholds] rawThreshold;
   vector<lower=0>[NITEMS] alpha;
   matrix[NPA,NITEMS]      rawTheta;
   cholesky_factor_corr[NITEMS] rawThetaCorChol;
 }
 transformed parameters {
+  vector[totalThresholds] threshold;
   vector[totalThresholds] cumTh;
   matrix[NPA,NITEMS]      theta;
 
@@ -52,8 +52,10 @@ transformed parameters {
     theta[pa,] = (rawThetaCorChol * rawTheta[pa,]')';
   }
   for (ix in 1:NITEMS) {
+    real maxSpan = max(theta[,ix]) - min(theta[,ix]);
     int from = TOFFSET[ix];
     int to = TOFFSET[ix] + NTHRESH[ix] - 1;
+    threshold[from:to] = maxSpan * rawThreshold[from:to];
     cumTh[from:to] = cumulative_sum(threshold[from:to]);
   }
 }
@@ -62,7 +64,7 @@ model {
   for (pa in 1:NPA) {
     rawTheta[pa,] ~ std_normal();
   }
-  threshold ~ inv_gamma(thresholdShape, .05*(1+thresholdShape));
+  rawThreshold ~ beta(1.1, 1.1);
   alpha ~ inv_gamma(alphaShape, 1.749*(1+alphaShape));
   {
     int cmpStart = 1;

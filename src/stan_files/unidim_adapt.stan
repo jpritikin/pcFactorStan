@@ -9,7 +9,6 @@ data {
   int<lower=1> N;               // observations
   int<lower=1> numRefresh;      // when change in item/pa1/pa2
   real alphaShape;
-  real thresholdShape;
   int<lower=1> NTHRESH;         // number of thresholds
   real varCorrection;
   // response data
@@ -30,17 +29,22 @@ transformed data {
 }
 parameters {
   vector[NPA] theta;
-  vector<lower=0>[NTHRESH] threshold;
+  vector<lower=0,upper=1>[NTHRESH] rawThreshold;
   real<lower=0> sigma;
 }
 transformed parameters {
-  vector[NTHRESH] cumTh = cumulative_sum(threshold);
   real scale = sd(theta) ^ varCorrection;
+  vector[NTHRESH] threshold;
+  vector[NTHRESH] cumTh;
+  real maxSpan = max(theta) - min(theta);
+  threshold = maxSpan * rawThreshold;
+  cumTh = cumulative_sum(threshold);
 }
 model {
+
   sigma ~ lognormal(1, 1);
   theta ~ normal(0, sigma);
-  threshold ~ inv_gamma(thresholdShape, .05*(1+thresholdShape));
+  rawThreshold ~ beta(1.1, 1.1);
 
   {
     int cmpStart = 1;

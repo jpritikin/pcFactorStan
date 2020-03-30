@@ -25,8 +25,7 @@ my $commonData =
   int<lower=1> NCMP;            // unique comparisons
   int<lower=1> N;               // observations
   int<lower=1> numRefresh;      // when change in item/pa1/pa2
-  real alphaShape;
-  real thresholdShape;';
+  real alphaShape;';
 
 my $responseData =
 '  // response data
@@ -57,7 +56,7 @@ my $unidim_ll =
 ';
 
 my $threshold_prior =
-  'threshold ~ inv_gamma(thresholdShape, .05*(1+thresholdShape));';
+  'rawThreshold ~ beta(1.1, 1.1);';
 
 my $alpha_prior =
   'alpha ~ inv_gamma(alphaShape, 1.749*(1+alphaShape));';
@@ -69,7 +68,7 @@ sub mkUnidim {
     my $par = $adapt? "sigma" : "alpha";
     my $scaleDef = $adapt? "
   real scale = sd(theta) ^ varCorrection;" : "";
-    my $theta_sd = $adapt? "sigma" : "1.0";
+    my $theta_prior = $adapt? "normal(0, sigma)" : "std_normal()";
     my $prior = $adapt? 'sigma ~ lognormal(1, 1);' : $alpha_prior;
     my $llBody = $ll? $unidim_ll : '';
 
@@ -89,15 +88,20 @@ transformed data {
 }
 parameters {
   vector[NPA] theta;
-  vector<lower=0>[NTHRESH] threshold;
+  vector<lower=0,upper=1>[NTHRESH] rawThreshold;
   real<lower=0> $par;
 }
-transformed parameters {
-  vector[NTHRESH] cumTh = cumulative_sum(threshold);$scaleDef
+transformed parameters {$scaleDef
+  vector[NTHRESH] threshold;
+  vector[NTHRESH] cumTh;
+  real maxSpan = max(theta) - min(theta);
+  threshold = maxSpan * rawThreshold;
+  cumTh = cumulative_sum(threshold);
 }
 model {
+
   $prior
-  theta ~ normal(0, $theta_sd);
+  theta ~ $theta_prior;
   $threshold_prior
 
   {
@@ -146,15 +150,18 @@ transformed data {
 }
 
 my $multivariateThresholdParam =
-  'vector<lower=0>[totalThresholds] threshold;';
+  'vector<lower=0,upper=1>[totalThresholds] rawThreshold;';
 
 my $multivariateThresholdTParamDecl =
-  'vector[totalThresholds] cumTh;';
+  'vector[totalThresholds] threshold;
+  vector[totalThresholds] cumTh;';
 
 my $multivariateThresholdTParam =
 'for (ix in 1:NITEMS) {
+    real maxSpan = max(theta[,ix]) - min(theta[,ix]);
     int from = TOFFSET[ix];
     int to = TOFFSET[ix] + NTHRESH[ix] - 1;
+    threshold[from:to] = maxSpan * rawThreshold[from:to];
     cumTh[from:to] = cumulative_sum(threshold[from:to]);
   }';
 
@@ -301,7 +308,6 @@ transformed parameters {
   matrix[NPA,NITEMS] theta;
   vector[NPATHS] rawPathProp;  // always positive
   real rawPerComponentVar[NITEMS,1+NFACTORS];
-  $multivariateThresholdTParam
   for (ix in 1:NITEMS) {
     theta[,ix] = rawUniqueTheta[,ix] * rawUnique[ix];
     rawPerComponentVar[ix, 1] = variance(theta[,ix]);
@@ -330,6 +336,7 @@ transformed parameters {
     }
     rawPathProp[px] = pred / (pred + resid);
   }
+  $multivariateThresholdTParam
 }
 model {
   $threshold_prior$latentPrior

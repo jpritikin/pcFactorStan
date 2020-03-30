@@ -115,8 +115,7 @@ prepCleanData <- function(df) {
     NPA=length(palist),
     NCMP=length(pick),
     N=sum(weight),
-    alphaShape=11.0,
-    thresholdShape=2.5,
+    alphaShape=4.0,
     # multivariate models
     NITEMS=length(nthr),
     NTHRESH=nthr,

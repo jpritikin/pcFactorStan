@@ -9,7 +9,6 @@ data {
   int<lower=1> N;               // observations
   int<lower=1> numRefresh;      // when change in item/pa1/pa2
   real alphaShape;
-  real thresholdShape;
   int<lower=1> NITEMS;
   int<lower=1> NTHRESH[NITEMS];         // number of thresholds
   int<lower=1> TOFFSET[NITEMS];
@@ -55,22 +54,18 @@ transformed data {
   }
 }
 parameters {
-  vector<lower=0>[totalThresholds] threshold;
+  vector<lower=0,upper=1>[totalThresholds] rawThreshold;
   matrix[NPA,NFACTORS] rawFactor;      // do not interpret, see factor
   vector[NPATHS] rawLoadings; // do not interpret, see factorLoadings
   matrix[NPA,NITEMS] rawUniqueTheta; // do not interpret, see uniqueTheta
   vector[NITEMS] rawUnique;      // do not interpret, see unique
 }
 transformed parameters {
+  vector[totalThresholds] threshold;
   vector[totalThresholds] cumTh;
   matrix[NPA,NITEMS] theta;
   vector[NPATHS] rawPathProp;  // always positive
   real rawPerComponentVar[NITEMS,1+NFACTORS];
-  for (ix in 1:NITEMS) {
-    int from = TOFFSET[ix];
-    int to = TOFFSET[ix] + NTHRESH[ix] - 1;
-    cumTh[from:to] = cumulative_sum(threshold[from:to]);
-  }
   for (ix in 1:NITEMS) {
     theta[,ix] = rawUniqueTheta[,ix] * rawUnique[ix];
     rawPerComponentVar[ix, 1] = variance(theta[,ix]);
@@ -99,9 +94,16 @@ transformed parameters {
     }
     rawPathProp[px] = pred / (pred + resid);
   }
+  for (ix in 1:NITEMS) {
+    real maxSpan = max(theta[,ix]) - min(theta[,ix]);
+    int from = TOFFSET[ix];
+    int to = TOFFSET[ix] + NTHRESH[ix] - 1;
+    threshold[from:to] = maxSpan * rawThreshold[from:to];
+    cumTh[from:to] = cumulative_sum(threshold[from:to]);
+  }
 }
 model {
-  threshold ~ inv_gamma(thresholdShape, .05*(1+thresholdShape));
+  rawThreshold ~ beta(1.1, 1.1);
   rawFactor[,1] ~ std_normal();
   rawLoadings ~ normal(0, 5.0);
   rawUnique ~ normal(0, 5.0);
