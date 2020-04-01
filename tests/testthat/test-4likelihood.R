@@ -28,7 +28,7 @@ test_that("unidim", {
   dl$scale <- 1.0
   m2 <- findModel("unidim_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
-  expect_equal(get_logposterior(f2)[[1]], -8045.434, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -8047.026, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
                c(-22.022, -13.486, -8.473, -0.291, -0.001), tolerance=1e-2, scale=1)
@@ -40,7 +40,7 @@ test_that("correlation", {
   dl$scale <- rnorm(dl$NITEMS, sd=.2)
   m2 <- findModel("correlation_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
-  expect_equal(get_logposterior(f2)[[1]], -64314.93, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -64366.02, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
                c(-29.637, -3.781, -2.027, -0.762, 0), tolerance=1e-2, scale=1)
@@ -80,7 +80,7 @@ test_that("mixed thresholds", {
   dl$scale <- scaleSave
   m2 <- findModel("correlation_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
-  expect_equal(get_logposterior(f2)[[1]], -5779.556, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -5797.598, tolerance=1e-2, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
                c(-26.73, -3.609, -1.794, -1.238, -0.035), tolerance=1e-2, scale=1)
