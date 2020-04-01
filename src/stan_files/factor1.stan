@@ -13,7 +13,7 @@ data {
   int<lower=1> NTHRESH[NITEMS];         // number of thresholds
   int<lower=1> TOFFSET[NITEMS];
   vector[NITEMS] scale;
-  vector[NITEMS] alpha;
+  real alpha[NITEMS];
   int<lower=1> NFACTORS;
   real factorScalePrior[NFACTORS];
   int<lower=1> NPATHS;
@@ -56,9 +56,9 @@ transformed data {
 parameters {
   vector<lower=0,upper=1>[totalThresholds] rawThreshold;
   matrix[NPA,NFACTORS] rawFactor;      // do not interpret, see factor
-  vector[NPATHS] rawLoadings; // do not interpret, see factorLoadings
+  vector<lower=0,upper=1>[NPATHS] rawLoadings; // do not interpret, see factorLoadings
   matrix[NPA,NITEMS] rawUniqueTheta; // do not interpret, see uniqueTheta
-  vector[NITEMS] rawUnique;      // do not interpret, see unique
+  vector<lower=0,upper=1>[NITEMS] rawUnique;      // do not interpret, see unique
 }
 transformed parameters {
   vector[totalThresholds] threshold;
@@ -67,7 +67,7 @@ transformed parameters {
   vector[NPATHS] rawPathProp;  // always positive
   real rawPerComponentVar[NITEMS,1+NFACTORS];
   for (ix in 1:NITEMS) {
-    theta[,ix] = rawUniqueTheta[,ix] * rawUnique[ix];
+    theta[,ix] = rawUniqueTheta[,ix] * (2*rawUnique[ix]-1);
     rawPerComponentVar[ix, 1] = variance(theta[,ix]);
   }
   for (fx in 1:NFACTORS) {
@@ -76,7 +76,7 @@ transformed parameters {
   for (px in 1:NPATHS) {
     int fx = factorItemPath[1,px];
     int ix = factorItemPath[2,px];
-    vector[NPA] theta1 = rawLoadings[px] * rawFactor[,fx];
+    vector[NPA] theta1 = (2*rawLoadings[px]-1) * rawFactor[,fx];
     rawPerComponentVar[ix,1+fx] = variance(theta1);
     theta[,ix] += theta1;
   }
@@ -105,8 +105,8 @@ transformed parameters {
 model {
   rawThreshold ~ beta(1.1, 1.1);
   rawFactor[,1] ~ std_normal();
-  rawLoadings ~ normal(0, 5.0);
-  rawUnique ~ normal(0, 5.0);
+  rawLoadings ~ beta(3.0, 3.0);
+  rawUnique ~ beta(3.0, 3.0);
   for (ix in 1:NITEMS) {
     rawUniqueTheta[,ix] ~ std_normal();
   }
@@ -126,41 +126,44 @@ model {
 }
 generated quantities {
   vector[NPATHS] pathProp = rawPathProp;
-  vector[NITEMS] sigma;
-  vector[NPATHS] pathLoadings = rawLoadings;
   matrix[NPA,NFACTORS] factor = rawFactor;
-  matrix[NPA,NITEMS] residual;
   matrix[NITEMS,NITEMS] residualItemCor;
-  int rawSeenFactor[NFACTORS];
-  int rawNegateFactor[NFACTORS];
 
-  for (ix in 1:NITEMS) {
-    residual[,ix] = rawUniqueTheta[,ix] * rawUnique[ix];
-    residual[,ix] -= mean(residual[,ix]);
-  }
-  residualItemCor = crossprod(residual);
-  residualItemCor = quad_form_diag(residualItemCor, 1.0 ./ sqrt(diagonal(residualItemCor)));
-
-  for (fx in 1:NITEMS) {
-    sigma[fx] = sd(theta[,fx]);
-  }
-  for (fx in 1:NFACTORS) rawSeenFactor[fx] = 0;
-  for (px in 1:NPATHS) {
-    int fx = factorItemPath[1,px];
-    int ix = factorItemPath[2,px];
-    if (rawSeenFactor[fx] == 0) {
-      rawSeenFactor[fx] = 1;
-      rawNegateFactor[fx] = rawLoadings[px] < 0;
+  {
+    matrix[NPA,NITEMS] residual;
+    for (ix in 1:NITEMS) {
+      residual[,ix] = rawUniqueTheta[,ix] * (2*rawUnique[ix]-1);
+      residual[,ix] -= mean(residual[,ix]);
     }
-    if (rawNegateFactor[fx]) {
-      pathLoadings[px] = -pathLoadings[px];
+    residualItemCor = crossprod(residual);
+    residualItemCor = quad_form_diag(residualItemCor, 1.0 ./ sqrt(diagonal(residualItemCor)));
+  }
+
+  {
+    vector[NPATHS] pathLoadings = (2*rawLoadings-1);
+    int rawSeenFactor[NFACTORS];
+    int rawNegateFactor[NFACTORS];
+    for (fx in 1:NFACTORS) rawSeenFactor[fx] = 0;
+    for (px in 1:NPATHS) {
+      int fx = factorItemPath[1,px];
+      int ix = factorItemPath[2,px];
+      if (rawSeenFactor[fx] == 0) {
+        rawSeenFactor[fx] = 1;
+        rawNegateFactor[fx] = rawLoadings[px] < 0.5;
+      }
+      if (rawNegateFactor[fx]) {
+        pathLoadings[px] = -pathLoadings[px];
+      }
+    }
+    for (fx in 1:NFACTORS) {
+      if (!rawNegateFactor[fx]) continue;
+      factor[,fx] = -factor[,fx];
+    }
+    for (fx in 1:NPATHS) {
+      if (pathLoadings[fx] < 0) pathProp[fx] = -pathProp[fx];
     }
   }
   for (fx in 1:NFACTORS) {
-    if (!rawNegateFactor[fx]) continue;
-    factor[,fx] = -factor[,fx];
-  }
-  for (fx in 1:NPATHS) {
-    if (pathLoadings[fx] < 0) pathProp[fx] = -pathProp[fx];
+    factor[,fx] /= sd(factor[,fx]);
   }
 }
