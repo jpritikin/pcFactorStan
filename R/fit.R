@@ -295,7 +295,7 @@ prepSingleFactorModel <- function(data, factorScalePrior=deprecated()) {
 #'                                   'body'),
 #'                            f2=c('waiting','control','evaluated','spont'),
 #'                            rc=c('novelty', 'waiting')),
-#'                       priScalePrior=psi)
+#'                       psiScalePrior=psi)
 #' str(dl)
 #' @family factor model
 #' @family data preppers
@@ -611,6 +611,7 @@ assertDataFitCompat <- function(dl, fit) {
 #' }
 #' @export
 #' @importFrom rstan extract
+#' @importFrom stats qnorm
 #' @family data extractor
 #' @examples
 #' \donttest{ vignette('manual', 'pcFactorStan') }
