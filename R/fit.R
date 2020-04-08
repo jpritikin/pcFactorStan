@@ -115,7 +115,6 @@ prepCleanData <- function(df) {
     NPA=length(palist),
     NCMP=length(pick),
     N=sum(weight),
-    alphaShape=5.0,
     # multivariate models
     NITEMS=length(nthr),
     NTHRESH=nthr,
@@ -129,7 +128,13 @@ prepCleanData <- function(df) {
     refresh=refresh,
     numOutcome=numOutcome,
     # multivariate data
-    item=item
+    item=item,
+    # priors
+    alphaScalePrior = 0.2,
+    # correlation model
+    corLKJPrior = 2.5,  # 2.0 not quite enough
+    # factor model
+    propShape = 4.0   # 1.1, 2.0, 3.0 not quite enough; 6.0 exhibits quite some bias
   )
   if (any(is.na(match(preppedDataFields, names(dl))))) {
     stop("Bug in prepCleanData(); contact developers") # nocov
@@ -232,19 +237,24 @@ findModel <- function(model=NULL) {
 #'
 #' Specify a single latent factor with a path to each item.
 #'
-#' @param factorScalePrior standard deviation of the normal prior for the logit transformed factor proportion
+#' @template args-factorScalePrior
 #' @template args-data
 #' @template return-datalist
 #' @examples
 #' dl <- prepData(phyActFlowPropensity)
-#' dl <- prepSingleFactorModel(dl, 0.9)
+#' dl <- prepSingleFactorModel(dl)
 #' str(dl)
 #' @family factor model
 #' @family data preppers
 #' @export
-prepSingleFactorModel <- function(data, factorScalePrior) {
+#' @importFrom lifecycle deprecate_warn
+#' @importFrom lifecycle deprecated
+prepSingleFactorModel <- function(data, factorScalePrior=deprecated()) {
+  if (lifecycle::is_present(factorScalePrior)) {
+    deprecate_warn("1.5.0", "prepSingleFactorModel(factorScalePrior = )")
+  }
   verifyIsPreppedData(data)
-  data$factorScalePrior <- as.array(factorScalePrior)
+  data$factorScalePrior <- as.array(1.2)
   ni <- data$NITEMS
   data$factorItemPath <- matrix(c(rep(1,ni), 1:ni), nrow=2, byrow=TRUE)
   data$NFACTORS <- 1L
@@ -285,23 +295,26 @@ prepSingleFactorModel <- function(data, factorScalePrior) {
 #'                                   'body'),
 #'                            f2=c('waiting','control','evaluated','spont'),
 #'                            rc=c('novelty', 'waiting')),
-#'                       c(flow=0.9, f2=0.5, rc=0.2), psi)
+#'                       priScalePrior=psi)
 #' str(dl)
 #' @family factor model
 #' @family data preppers
 #' @seealso To simulate data from a factor model: \link{generateFactorItems}
 #' @export
-prepFactorModel <- function(data, path, factorScalePrior,
+prepFactorModel <- function(data, path, factorScalePrior=deprecated(),
                             psiScalePrior=NULL) {
+  if (lifecycle::is_present(factorScalePrior)) {
+    deprecate_warn("1.5.0", "prepSingleFactorModel(factorScalePrior = )")
+  }
   verifyIsPreppedData(data)
   items <- data$nameInfo$item
-  validateFactorModel(items, path, factorScalePrior)
+  validateFactorModel(items, path)
   itemsPerFactor <- sapply(path, length)
-  data$factorScalePrior <- as.array(unname(factorScalePrior[names(path)]))
+  data$factorScalePrior <- as.array(rep(1.2, length(names(path)))) # factor out TODO
   data$factorItemPath <- matrix(c(rep(1:length(itemsPerFactor), itemsPerFactor),
                                   unlist(lapply(path, function(x) match(x, items)))),
                                 nrow=2, byrow=TRUE)
-  data$NFACTORS <- length(factorScalePrior)
+  data$NFACTORS <- length(names(path))
   if (length(path) > 1) {
     if (missing(psiScalePrior)) {
       stop("Specify psiScalePrior for correlations between factors")
@@ -602,7 +615,7 @@ assertDataFitCompat <- function(dl, fit) {
 #' @examples
 #' \donttest{ vignette('manual', 'pcFactorStan') }
 responseCurve <- function(dl, fit, responseNames, item=dl$nameInfo$item,
-                          samples=100, from=-2, to=-from, by=.025) {
+                          samples=100, from=qnorm(.1), to=-from, by=.02) {
   assertDataFitCompat(dl, fit)
   pd <- fit@par_dims
   itemIndex <- match(item, dl$nameInfo$item)

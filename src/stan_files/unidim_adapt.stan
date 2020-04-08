@@ -3,12 +3,12 @@ functions {
 #include /functions/pairwise.stan
 }
 data {
+  real alphaScalePrior;
   // dimensions
   int<lower=1> NPA;             // worths or players or objects or things
   int<lower=1> NCMP;            // unique comparisons
   int<lower=1> N;               // observations
   int<lower=1> numRefresh;      // when change in item/pa1/pa2
-  real alphaShape;
   int<lower=1> NTHRESH;         // number of thresholds
   real varCorrection;
   // response data
@@ -28,33 +28,34 @@ transformed data {
   }
 }
 parameters {
-  vector[NPA] theta;
+  vector[NPA] rawTheta;
   vector<lower=0,upper=1>[NTHRESH] rawThreshold;
   real<lower=0> sigma;
 }
 transformed parameters {
-  real scale = sd(theta) ^ varCorrection;
+  real scale = sd(rawTheta) ^ varCorrection;
   vector[NTHRESH] threshold;
-  vector[NTHRESH] cumTh;
-  real maxSpan = max(theta) - min(theta);
+  vector[NTHRESH] rawCumTh;
+  real maxSpan = max(rawTheta) - min(rawTheta);
   threshold = maxSpan * rawThreshold;
-  cumTh = cumulative_sum(threshold);
+  rawCumTh = cumulative_sum(threshold);
 }
 model {
 
-  sigma ~ lognormal(1, 1);
-  theta ~ normal(0, sigma);
-  rawThreshold ~ beta(1.1, 1.1);
+  sigma ~ inv_gamma(1, 1);
+  rawTheta ~ normal(0, sqrt(sigma));
+  rawThreshold ~ beta(1.1, 2);
 
   {
     int cmpStart = 1;
     for (rx in 1:numRefresh) {
       target += pairwise_logprob(rcat, weight, cmpStart, refresh[rx],
-                                 scale, alpha, theta[pa1[rx]], theta[pa2[rx]], cumTh);
+                                 scale, alpha, rawTheta[pa1[rx]], rawTheta[pa2[rx]], rawCumTh);
       cmpStart += refresh[rx];
     }
   }
 }
 generated quantities {
+  vector[NPA] theta = rawTheta;
   real thetaVar = variance(theta);
 }

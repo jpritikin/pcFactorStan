@@ -1,1 +1,1 @@
-#' @param factorScalePrior a named numeric vector
+#' @param factorScalePrior a named numeric vector (deprecated)

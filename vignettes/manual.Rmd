@@ -95,10 +95,15 @@ If the participant selected 'golf' and 'running' for activities then 'golf' was 
 A _somewhat more_ response is scored 1 or -1
 and _much more_ scored 2 or -2.
 A tie (i.e. _roughly equal_) is scored as zero.
+A negative value indicates > (greater than) and positive
+value indicates > (less than).
+For example, if `A1` is _golf_, `A2` is _running_, and
+the observed response is 2 then the endorsement
+is "_golf_ is much less predictable than _running_."
+
 We will need to analyze each item separately before
 we analyze them together. Therefore, we will start
 with Item _skill_.
-
 Data must be fed into **Stan** in a partially digested form. The next block of code demonstrates how a suitable data list may be constructed using the `prepData()` function. This function automatically determines the
 number of threshold parameters based on the
 range observed in your data.
@@ -153,8 +158,8 @@ ggplot(data.frame(x=theta, activity=dl$nameInfo$pa, y=0.47)) +
 
 Intuitively, this seems like a fairly reasonable ranking for skill.
 As pretty as the plot is, the main reason that we fit this model
-was to find a scaling constant to produce a standard
-deviation close to 1.0,
+was to find a scaling constant to produce a score variance
+close to 1.0,
 
 ```{r}
 s50 <- summary(fit1, pars=c("scale"), probs=c(.5))$summary[,'50%']
@@ -181,25 +186,24 @@ print(result)
 kable(result)
 ```
 
-Item _goal1_ ran into trouble.
-A nonzero count of divergent transitions or low_bfmi means that the item
-contained too little signal to estimate.
-Item _feedback1_ is also prone to failure.
-We could try again with `varCorrection=1.0`,
-but we are going to exclude these items instead.
-The model succeeded on the rest of the items.
-I requested `iter=1000L` to demonstrate how `calibrateItems` will resample the model until the `n_eff` is large enough and the `Rhat` small enough.
+Items _goal1_ and _feedback1_ are prone to failure.
+This happens when there is no clear ranking between objects.
+For example, if we observe that `A<B`, `B<C`, and `C<A` then the
+only sensible interpretation is that `A=B=C` which can only have
+close to zero variance.
+We exclude these two items with the smallest `scale`.
+I requested `iter=1000L` to demonstrate how `calibrateItems` will resample the model until `n_eff` is large enough and `Rhat` small enough.
 As demonstrated in the _iter_ column, some items needed more than 1000 samples to converge.
 
-Next we will fit the correlation model. We exclude the Cholesky
-factor of the correlation matrix `rawThetaCorChol` because the
-regular correlation matrix is also output.
+Next we will fit the correlation model. We exclude parameters
+that start with the prefix `raw`. These parameters are needed
+by the model, but should not be interpreted.
 ```{r covarianceData, cache=TRUE}
 pafp <- phyActFlowPropensity
 excl <- match(c('goal1','feedback1'), colnames(pafp))
 pafp <- pafp[,-excl]
 dl <- prepData(pafp)
-dl$scale <- result[-excl,'scale']
+dl$scale <- result[match(dl$nameInfo$item, result$item), 'scale']
 ```
 
 ```{r covariance, message=FALSE, results='hide', cache=TRUE}
@@ -269,40 +273,18 @@ ggplot(df) +
 ```
 
 These response curves are a function of the `thresholds`, `scale`,
-and `alpha` parameters. A detailed description of the item
+and `alpha` parameters.
+The ability of an item to discriminate amongst objects is
+partitioned into the `scale` and `alpha` parameters.
+Most of the information is accounted for by the `scale`
+parameter and the `alpha` parameter should always
+be estimated near 1.75.
+The distribution of objects is always standardized to a
+variance near 1.0; the `scale` parameter zooms in on the x-axis
+to account for the ability to make finer and finer distinctions among objects.
+Notice the variation in x-axis among the plots above.
+A detailed description of the item
 response model can be found in the man page for `responseCurve`.
-A large `alpha` (>1) can mean that the item discriminates among
-objects well. However, it can also mean that the model
-predicts all responses will be _equal_. If most observed responses are
-indeed _equal_ then this can result in good model fit, but we
-can also infer that the item is useless.
-
-```{r}
-alpha <- summary(fit2, pars=c("alpha"), probs=c(.5))$summary
-rownames(alpha) <- covItemNames
-```
-
-```{r, results='hide'}
-print(alpha[alpha[,'sd']>.25,,drop=FALSE])
-```
-```{r, results='asis', echo=FALSE}
-kable(alpha[alpha[,'sd']>.25,,drop=FALSE])
-```
-
-I already decided to exclude _waiting_ by inspection of
-the correlation matrix.
-Item _chatter_ is on the borderline, but we can retain it.
-
-We will enter the `alpha` parameters into the factor model
-as non-stochastic data.
-Trying to estimate `alpha` in the factor model causes bias,
-at least in the models that I have tried.
-The factor model is prone to increase both `alpha` and the
-magnitude of factor proportions at the expense of
-`threshold` accuracy.
-To treat `alpha` as non-stochastic reduces variability
-in the factor model, but not by much.
-Simulations indicate that the posterior distribution remains well calibrated.
 
 I will fit model 'factor_ll' instead of 'factor' so I can use the
 **loo** package to look for outliers.
@@ -314,30 +296,15 @@ of `filterGraph` and `normalizeData` and pass the result to `prepCleanData`.
 Up until version 1.0.2, only a single factor model was available. As
 of 1.1.0, the factor model supports an arbitrary number of factors and
 arbitrary factor-to-item structure. In this example, we will
-keep with the simplest factor model, a single factor that predicts all items.
-We need to set a prior on the factor loadings. The prior is given as the standard
-deviation of the normal prior for the logit transformed factor proportion.
-Here's an example:
-
-```{r}
-factorProportion <- .3
-factorScalePrior <- .9
-dnorm(qlogis(0.5 + factorProportion/2), sd=factorScalePrior)
-```
-
-Enough data are available that we can use a factor scale prior of
-1.0. If the model exhibited sampling difficulties (i.e. divergences)
-then a smaller prior could help by constraining the factor proportion
-closer to zero.
+stay with the simplest factor model, a single factor that predicts all items.
 
 ```{r factorData1, cache=TRUE}
 pafp <- pafp[,c(paste0('pa',1:2),
              setdiff(covItemNames, c('spont','control','evaluated','waiting')))]
 pafp <- normalizeData(filterGraph(pafp))
 dl <- prepCleanData(pafp)
-dl <- prepSingleFactorModel(dl, 1.0)
+dl <- prepSingleFactorModel(dl)
 dl$scale <- result[match(dl$nameInfo$item, result$item), 'scale']
-dl$alpha <- alpha[match(dl$nameInfo$item, rownames(alpha)), 'mean']
 ```
 ```{r, results='hide', include = FALSE}
 rm(fit2)  # free up some memory
@@ -346,26 +313,46 @@ rm(fit2)  # free up some memory
 ```{r factor, message=FALSE, results='hide', cache=TRUE}
 fit3 <- pcStan("factor1_ll", data=dl, include=FALSE,
                pars=c('rawUnique', 'rawUniqueTheta', 'rawPerComponentVar',
-	       'rawFactor', 'rawLoadings', 'rawFactorProp', 'rawNegateFactor', 'rawSeenFactor',
-	       'residual'))
+	       'rawFactor', 'rawLoadings', 'rawFactorProp', 'rawThreshold',
+         'rawPathProp', 'rawCumTh'))
 ```
 
 To check the fit diagnostics, we have to take care to
 examine only the parameters of interest. The factor model outputs
-many parameters that should not be interpreted. For example, we do not
-care about `unique` or `uniqueTheta`, the unique scores.
+many parameters that should not be interpreted (those that start
+with the prefix `raw`).
 
 ```{r factorDiag1, cache=TRUE}
 check_hmc_diagnostics(fit3)
 
-interest <- c("threshold", "pathProp", "factor", "lp__")
+interest <- c("threshold", "alpha", "pathProp", "factor", "residualItemCor", "lp__")
 
 allPars <- summary(fit3, pars=interest)$summary
+allPars <- allPars[allPars[,'sd'] > 1e-6,]
 print(min(allPars[,'n_eff']))
 print(max(allPars[,'Rhat']))
 ```
 
-Looks good! Let us see which data are the most unexpected by the model.
+Looks good!
+
+We can take a look at the item response curves.
+They look similar to the corresponding curves
+from the correlation model.
+
+```{r responseCurvesF, cache=TRUE}
+df <- responseCurve(dl, fit3,
+  item=setdiff(dl$nameInfo$item, c('spont','control','evaluated','waiting')),
+  responseNames=c("much more","somewhat more", 'equal',
+                  "somewhat less", "much less"))
+ggplot(df) +
+  geom_line(aes(x=worthDiff, y=prob, color=response,linetype=response,
+                group=responseSample), size=.2, alpha=.2) +
+  xlab("difference in latent worths") + ylab("probability") +
+  ylim(0,1) + facet_wrap(~item, scales="free_x") +
+  guides(color=guide_legend(override.aes=list(alpha = 1, size=1)))
+```
+
+Let us see which data are the most unexpected by the model.
 We create a `loo` object and inspect the summary output.
 
 ```{r factorLoo, cache=TRUE}
@@ -453,8 +440,8 @@ kable(exam)
 
 Here we find that
 `r ot[xx,'pa1']` was estimated `r exam[1,'mean'] - exam[2,'mean']` units more
-predictable than `r ot[xx,'pa2']`, but apparently this ranking was
-contradicted by most other observations.
+predictable than `r ot[xx,'pa2']`. I guess this difference was expected
+to be larger.
 What sample sizes are associated with these activities?
 
 ```{r}
@@ -468,7 +455,9 @@ So there is little information.
 We could continue our investigation by looking at which
 responses justified these _predict_ estimates.
 However, let us move on and
-plot the marginal posterior distributions of the factor proportions,
+plot the marginal posterior distributions of the factor proportions.
+Typical jargon is _factor loadings_, but _proportion_ is
+preferable since the scale is arbitrary and standardized.
 
 ```{r pathProp, cache=TRUE}
 pi <- parInterval(fit3, 'pathProp', dl$nameInfo$item, label='item')
@@ -508,15 +497,15 @@ then the residual item activity scores should be uncorrelated.
 Let us examine the residual item correlation matrix.
 
 ```{r residualItemCor, cache=TRUE}
-ric <- summary(fit3, pars=c('residualItemCor'), prob=c(.2,.5,.8))$summary
-r20 <- matrix(ric[,'20%'], length(dl$nameInfo$item), length(dl$nameInfo$item),
+ric <- summary(fit3, pars=c('residualItemCor'), prob=c(.1,.5,.9))$summary
+rl <- matrix(ric[,'10%'], length(dl$nameInfo$item), length(dl$nameInfo$item),
        dimnames=list(dl$nameInfo$item,dl$nameInfo$item))
 r50 <- matrix(ric[,'50%'], length(dl$nameInfo$item), length(dl$nameInfo$item),
               dimnames=list(dl$nameInfo$item,dl$nameInfo$item))
-r80 <- matrix(ric[,'80%'], length(dl$nameInfo$item), length(dl$nameInfo$item),
+ru <- matrix(ric[,'90%'], length(dl$nameInfo$item), length(dl$nameInfo$item),
        dimnames=list(dl$nameInfo$item,dl$nameInfo$item))
 ric5 <- fivenum(r50[lower.tri(r50)])
-mask <- sign(r20) == -sign(r80) # small, not statistically significant
+mask <- sign(rl) == -sign(ru) # small, not statistically significant
 r50[mask] <- 0
 diag(r50) <- 2*max(abs(r50[lower.tri(r50)]))  # rescale for better visualization
 
@@ -528,15 +517,11 @@ qgraph(r50, layout = "spring", graph = "cor", labels=colnames(r50),
 
 Median residual correlations ranged from `r ric5[1]` to `r ric5[5]`.
 To reduce visual clutter,
-small correlations with 60\% posterior intervals crossing zero were set to zero.
-This is conservative; Almost none of the correlations would remain
-if a 90\% interval was used instead.
-_Stakes_ is an ideal item, uncorrelated with other items.
-There seem to be two main clusters.
-_Body_, _reward_, and _chatter_ seem more emotional
-while _novelty_, _creative_, and _present_ seem more cognitive.
-That the items faintly cluster along a cognitive-emotional
-spectrum, with _skill_ in between, is not necessarily problematic.
+small correlations with 80\% posterior intervals crossing zero were hidden.
+This is conservative; almost none of the correlations would remain
+if a 90\% interval was used instead, indicating adequate model fit.
+_Stakes_ is an ideal item, least correlated with other items.
+These faint residual correlations are hard to interpret.
 It seems likely that any survey measure is going to exhibit
 some faint correlations of this nature.
 
@@ -545,11 +530,6 @@ go find a dojo and commence study of martial arts!
 
 # Technical notes
 
-Given that my background is more in software than math,
-I am not a fan of the greek letters used
-with such enthusiasm by mathematicians.
-When I name variables, I favor the expressive over the succinct.
-
 If you read through the **Stan** models included with this package, you will find some
 variables prefixed with `raw`. These are special variables
 internal to the model. In particular, you should not try
@@ -557,71 +537,65 @@ to evaluate the $\widehat R$ or effective sample size
 of `raw` parameters. These parameters are best excluded
 from the sampling output.
 
-## Unidim Adapt
+## Latent worths
 
-| parameter | prior             | purpose                  |
-|-----------|-------------------|--------------------------|
-| threshold | lognormal(0,1)    | item response thresholds |
-| theta     | normal(0,sigma)   | latent score             |
-| sigma     | lognormal(1,1)    | latent score scale             |
-| scale     | N/A               | latent score scaling constant  |
+Latent worths are estimated by `theta` parameters. `theta` is always
+standard normally distributed because scale is arbitrary.
 
+## Thresholds
+
+Thresholds are parameterized as a proportion with distribution
+`Beta(1.1, 2.0)`. The shape of this prior is fairly arbitrary.
+`Uniform(0,1)` also works in many cases. There is usually plenty of
+information available to estimate thresholds accurately.
+To convert from a proportion to threshold units, the following
+formula is employed, `rawThreshold * (max(theta) - min(theta))`.
+
+## Unidim adapt
+
+This model is fairly robust; priors are unlikely to need tweaking.
 The 'unidim_adapt' model has a `varCorrection` constant
 that is used to calibrate the `scale`. For all other models,
-per-item `scale` must be passed in as data.
-`scale` has no substantive interpretation, but it is used to
-partition signal between object variance and item discrimination.
-While object variance has no substantive interpretation,
-item discrimination is interpretable.
+the per-item `scale` must be supplied as data.
 
-## Unidim
+## Alpha
 
-| parameter | prior             | purpose                  |
-|-----------|-------------------|--------------------------|
-| threshold | lognormal(0,1)    | item response thresholds |
-| alpha     | exponential(0.1)  | item discrimination    |
-| theta     | normal(0,1)       | latent score    |
+All models except 'unidim_adapt' estimate the item discrimination
+parameter `alpha`.  A `normal(1.749, alphaScalePrior)` prior is used
+with `alphaScalePrior` set to 0.2 by default. `alpha` must be positive
+so the normal distribution is truncated at zero. The distribution is
+centered at 1.749 because this allows the logistic to approximate the
+standard normal cumulative distribution (Savalei, 2006). We need to
+estimate `alpha` because `scale` is entered as a constant and we need
+to account for the stochastic uncertainty in the item's ability to
+discriminate objects.
 
 ## Correlation
 
-| parameter | prior             | purpose                              |
-|-----------|-------------------|--------------------------------------|
-| threshold | lognormal(0,1)    | item response thresholds             |
-| alpha     | exponential(0.1)  | item discrimination    |
-| thetaCor  | lkj(2)            | correlations between items           |
-| theta     | _see below_       | latent score                |
-
-Thresholds for all items are combined into a single vector.
-The prior for `theta` is multivariate normal with correlations
-`thetaCor` and scale 1.0.
-Exclude `rawTheta` and `rawThetaCorChol` from sampling reports.
+The correlation matrix uses a `lkj_corr(corLKJPrior)` prior with
+`corLKJPrior` set to 2.5 by default. It may be necessary to increase
+the prior if divergences are observed.
 
 ## Factor
 
-| parameter       | prior               | purpose                              |
-|-----------------|---------------------|--------------------------------------|
-| threshold       | lognormal(0,1)      | item response thresholds             |
-| pathLoadings    | normal(0,5)         | signed scale of factor scores        |
-| factor          | normal(0,1)         | factor scores                        |
-| pathProp        | _see below_         | signed factor variance proportion    |
-| Psi             | _see below_         | factor correlations                  |
-| sigma           | N/A                 | relative item scale                  |
-| residualItemCor | N/A                 | residual item correlation matrix     |
+`factor` scores are standard normally distributed. `rawLoadings` are
+distributed `beta(propShape, propShape)` with `propShape` set to 4.0
+by default. `rawLoadings` has an indirect influence on `pathProp`. The
+quantity `2*rawLoadings-1` is used to scale the factor scores, but
+`pathProp` is computed based on Equation 3 of Gelman et al. (in
+press).
+`pathProp` is a signed proportion bounded between -1 and 1.
+`pathProp` is additionally constrained by prior `normal(logit(0.5 + pathProp/2),
+pathScalePrior)` where `pathScalePrior` is set to 1.2 by default. This
+prevents extreme factor proportions (i.e. |pathProp|>.95). The purpose
+of `propShape` is to nudge `rawLoadings` toward zero. If may be
+necessary to increase `propShape` if divergences are observed.
 
-Thresholds for all items are combined into a single vector.
-`pathProp` is computed based on Equation 3 of Gelman et al. (in press).
-The prior on `pathProp` is `normal(logit(0.5 + pathProp/2), pathScalePrior)`
-where `pathScalePrior` is provided as data (see `prepSingleFactorModel()`).
 If you have more than one factor then `Psi` is available
 to estimate correlations among factors.
-Similar to `pathScalePrior`,
-the prior on entries of `Psi` is `normal(logit(0.5 + Psi/2), psiScalePrior)`.
-The `unique` and `pathLoadings` parameters are only relatively interpretable because
-the scale is arbitrary.
-The most interpretable parameter is `pathProp`.
-`pathProp` is a signed proportion bounded between -1 and 1.
-Exclude `rawUnique`, `rawUniqueTheta`, `rawFactor`, `rawLoadings`, `rawPerComponentVar`,
-`rawPathProp`, `rawNegateFactor`, `rawSeenFactor`, and `residual` from sampling.
+The prior on entries of `Psi` is `normal(logit(0.5 + Psi/2), psiScalePrior)`.
+It may be necessary to reduce `psiScalePrior` toward zero if
+factors are highly correlated.
 
 The idea of putting a prior on `pathProp` was inspired by Gelman (2019, Aug 23).
 
@@ -630,6 +604,9 @@ The idea of putting a prior on `pathProp` was inspired by Gelman (2019, Aug 23).
 Gelman, A. (2019, Aug 23). Yes, you can include prior information on quantities of interest, not just on parameters in your model [Blog post]. Retrieved from [https://statmodeling.stat.columbia.edu/2019/08/23/yes-you-can-include-prior-information-on-quantities-of-interest-not-just-on-parameters-in-your-model/](https://statmodeling.stat.columbia.edu/2019/08/23/yes-you-can-include-prior-information-on-quantities-of-interest-not-just-on-parameters-in-your-model/).
 
 Gelman, A., Goodrich, B., Gabry, J., & Vehtari, A. (in press). R-squared for Bayesian regression models. _The American Statistician._ DOI: 10.1080/00031305.2018.1549100
+
+Savalei, V. (2006). Logistic approximation to the normal: The KL rationale.
+_Psychometrika, 71_(4), 763–767. doi:10.1007/s11336-004-1237-y
 
 Silver, D., Hubert, T., Schrittwieser, J., Antonoglou, I., Lai, M.,
 Guez, A., ... & Lillicrap, T. (2018). A general reinforcement

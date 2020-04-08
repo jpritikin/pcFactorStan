@@ -3,17 +3,17 @@ functions {
 #include /functions/pairwise.stan
 }
 data {
+  real alphaScalePrior;
   // dimensions
   int<lower=1> NPA;             // worths or players or objects or things
   int<lower=1> NCMP;            // unique comparisons
   int<lower=1> N;               // observations
   int<lower=1> numRefresh;      // when change in item/pa1/pa2
-  real alphaShape;
   int<lower=1> NITEMS;
   int<lower=1> NTHRESH[NITEMS];         // number of thresholds
   int<lower=1> TOFFSET[NITEMS];
   vector[NITEMS] scale;
-  real alpha[NITEMS];
+  real propShape;
   int<lower=1> NFACTORS;
   real factorScalePrior[NFACTORS];
   int<lower=1> NPSI;  // = NFACTORS * (NFACTORS-1) / 2;
@@ -56,22 +56,23 @@ transformed data {
   }
 }
 parameters {
+  real<lower=0> alpha[NITEMS];
   vector<lower=0,upper=1>[totalThresholds] rawThreshold;
   corr_matrix[NFACTORS] Psi;
   matrix[NPA,NFACTORS] rawFactor;      // do not interpret, see factor
   vector<lower=0,upper=1>[NPATHS] rawLoadings; // do not interpret, see factorLoadings
   matrix[NPA,NITEMS] rawUniqueTheta; // do not interpret, see uniqueTheta
-  vector<lower=0,upper=1>[NITEMS] rawUnique;      // do not interpret, see unique
+  vector<lower=-1,upper=1>[NITEMS] rawUnique;      // do not interpret, see unique
 }
 transformed parameters {
   vector[totalThresholds] threshold;
-  vector[totalThresholds] cumTh;
+  vector[totalThresholds] rawCumTh;
   cholesky_factor_corr[NFACTORS] CholPsi = cholesky_decompose(Psi);
   matrix[NPA,NITEMS] theta;
   vector[NPATHS] rawPathProp;  // always positive
   real rawPerComponentVar[NITEMS,1+NFACTORS];
   for (ix in 1:NITEMS) {
-    theta[,ix] = rawUniqueTheta[,ix] * (2*rawUnique[ix]-1);
+    theta[,ix] = rawUniqueTheta[,ix] * rawUnique[ix];
     rawPerComponentVar[ix, 1] = variance(theta[,ix]);
   }
   for (fx in 1:NFACTORS) {
@@ -103,11 +104,12 @@ transformed parameters {
     int from = TOFFSET[ix];
     int to = TOFFSET[ix] + NTHRESH[ix] - 1;
     threshold[from:to] = maxSpan * rawThreshold[from:to];
-    cumTh[from:to] = cumulative_sum(threshold[from:to]);
+    rawCumTh[from:to] = cumulative_sum(threshold[from:to]);
   }
 }
 model {
-  rawThreshold ~ beta(1.1, 1.1);
+  for (ix in 1:NITEMS) alpha[ix] ~ normal(1.749, alphaScalePrior) T[0,];
+  rawThreshold ~ beta(1.1, 2);
   {
     int px=1;
     for (cx in 1:(NFACTORS-1)) {
@@ -120,8 +122,8 @@ model {
   for (xx in 1:NPA) {
     rawFactor[xx,] ~ multi_normal_cholesky_lpdf(rep_vector(0, NFACTORS), CholPsi);
   }
-  rawLoadings ~ beta(3.0, 3.0);
-  rawUnique ~ beta(3.0, 3.0);
+  rawLoadings ~ beta(propShape, propShape);
+  rawUnique ~ uniform(-1,1);
   for (ix in 1:NITEMS) {
     rawUniqueTheta[,ix] ~ std_normal();
   }
@@ -133,10 +135,11 @@ model {
       int to = TOFFSET[ix] + NTHRESH[ix] - 1;
       target += pairwise_logprob(rcat, weight, cmpStart, refresh[rx],
                                  scale[ix], alpha[ix], theta[pa1[rx], ix],
-                                 theta[pa2[rx], ix], cumTh[from:to]);
+                                 theta[pa2[rx], ix], rawCumTh[from:to]);
       cmpStart += refresh[rx];
     }
   }
+  // 1.0 excessive, 1.5 not enough
   target += normal_lpdf(logit(0.5 + rawPathProp/2.0) | 0, pathScalePrior);
 }
 generated quantities {
@@ -149,8 +152,9 @@ generated quantities {
   {
     matrix[NPA,NITEMS] residual;
     for (ix in 1:NITEMS) {
-      residual[,ix] = rawUniqueTheta[,ix] * (2*rawUnique[ix]-1);
+      residual[,ix] = rawUniqueTheta[,ix] * rawUnique[ix];
       residual[,ix] -= mean(residual[,ix]);
+      residual[,ix] /= sd(residual[,ix]);
     }
     residualItemCor = crossprod(residual);
     residualItemCor = quad_form_diag(residualItemCor, 1.0 ./ sqrt(diagonal(residualItemCor)));
@@ -181,6 +185,7 @@ generated quantities {
     }
   }
   for (fx in 1:NFACTORS) {
+    factor[,fx] -= mean(factor[,fx]);
     factor[,fx] /= sd(factor[,fx]);
   }
 
@@ -196,7 +201,7 @@ generated quantities {
       log_lik[cur:last] =
         pairwise_loo(rcat, weight, nout, cmpStart, refresh[rx],
                      scale[ix], alpha[ix],
-                     theta[pa1[rx],ix], theta[pa2[rx],ix], cumTh[from:to]);
+                     theta[pa1[rx],ix], theta[pa2[rx],ix], rawCumTh[from:to]);
       cmpStart += refresh[rx];
       cur += numOutcome[rx];
     }

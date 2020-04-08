@@ -24,7 +24,7 @@ test_that("loo univariate", {
   dl$scale <- 1.5
   m1 <- suppressWarnings(pcStan("unidim_ll", dl, chains=2L, iter=300))
 
-  loo1 <- toLoo(m1, cores=1)
+  loo1 <- suppressWarnings(toLoo(m1, cores=1))
   expect_error(outlierTable(df, loo1),
                "Data must be processed by prepData")
 })
@@ -63,7 +63,7 @@ test_that("loo", {
   m1 <- suppressWarnings(pcStan("correlation_ll", dl, chains=2L, iter=400L))
 
   loo1 <- suppressWarnings(toLoo(m1, cores=1))
-  ot <- outlierTable(dl, loo1, .4)
+  ot <- outlierTable(dl, loo1, .3)
   expect_true(nrow(ot) > 0)
 
   bad <- df[df$pa1==ot[1,'pa1'] & df$pa2==ot[1,'pa2'],]

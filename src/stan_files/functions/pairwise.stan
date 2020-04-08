@@ -23,6 +23,12 @@ vector cmp_probs(real scale, real alpha, real pa1, real pa2, vector thr, int[] w
   for (tx in 2:num_elements(out)) {
     out[tx] = pr[tx] - pr[tx-1];
   }
+  for (tx in 1:num_elements(want)) {
+    if (want[tx] && (out[tx] <= 0 || out[tx] >= 1)) {
+      reject("out[",tx,"]=",out[tx],"; scale=",
+             scale, " alpha=", alpha, " pa1=", pa1, " pa2=", pa2, " th=", thr);
+    }
+  }
   return out;
 }
 

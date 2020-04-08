@@ -20,12 +20,12 @@ use File::Compare;
 die "Must be run from top level" if !-e './tools/genStan';
 
 my $commonData =
-'  // dimensions
+'  real alphaScalePrior;
+  // dimensions
   int<lower=1> NPA;             // worths or players or objects or things
   int<lower=1> NCMP;            // unique comparisons
   int<lower=1> N;               // observations
-  int<lower=1> numRefresh;      // when change in item/pa1/pa2
-  real alphaShape;';
+  int<lower=1> numRefresh;      // when change in item/pa1/pa2';
 
 my $responseData =
 '  // response data
@@ -36,10 +36,13 @@ my $responseData =
   int refresh[numRefresh];
   int numOutcome[numRefresh];';
 
-my $unidim_ll =
-'  real log_lik[N];
+my $looDecl =
+  '
+  real log_lik[N];
+';
 
-  {
+my $unidim_ll =
+'{
     int cmpStart = 1;
     int cur = 1;
 
@@ -48,7 +51,7 @@ my $unidim_ll =
       int last = cur + nout - 1;
       log_lik[cur:last] =
         pairwise_loo(rcat, weight, nout, cmpStart, refresh[rx],
-                     scale, alpha, theta[pa1[rx]], theta[pa2[rx]], cumTh);
+                     scale, alpha, theta[pa1[rx]], theta[pa2[rx]], rawCumTh);
       cmpStart += refresh[rx];
       cur += numOutcome[rx];
     }
@@ -56,10 +59,10 @@ my $unidim_ll =
 ';
 
 my $threshold_prior =
-  'rawThreshold ~ beta(1.1, 1.1);';
+  'rawThreshold ~ beta(1.1, 2);';
 
 my $alpha_prior =
-  'alpha ~ inv_gamma(alphaShape, 1.749*(1+alphaShape));';
+  'normal(1.749, alphaScalePrior) T[0,]';
 
 sub mkUnidim {
     my ($adapt, $ll) = @_;
@@ -67,10 +70,15 @@ sub mkUnidim {
     my $xdata = $adapt? "\n  real alpha = 1.749;" : '';
     my $par = $adapt? "sigma" : "alpha";
     my $scaleDef = $adapt? "
-  real scale = sd(theta) ^ varCorrection;" : "";
-    my $theta_prior = $adapt? "normal(0, sigma)" : "std_normal()";
-    my $prior = $adapt? 'sigma ~ lognormal(1, 1);' : $alpha_prior;
+  real scale = sd(rawTheta) ^ varCorrection;" : "";
+    my $theta_prior = $adapt? "normal(0, sqrt(sigma))" : "std_normal()";
+    my $prior = $adapt? 'sigma ~ inv_gamma(1, 1);' : "alpha ~ $alpha_prior;";
+    my $llDecl = $ll? $looDecl : '';
     my $llBody = $ll? $unidim_ll : '';
+    my $thetaPP = $adapt? "vector[NPA] theta = rawTheta;
+  real thetaVar = variance(theta);" : "vector[NPA] theta = rawTheta;
+  theta -= mean(theta);
+  theta /= sd(theta);";
 
     my $unidim =
 qq[data {
@@ -87,34 +95,34 @@ transformed data {
   }
 }
 parameters {
-  vector[NPA] theta;
+  vector[NPA] rawTheta;
   vector<lower=0,upper=1>[NTHRESH] rawThreshold;
   real<lower=0> $par;
 }
 transformed parameters {$scaleDef
   vector[NTHRESH] threshold;
-  vector[NTHRESH] cumTh;
-  real maxSpan = max(theta) - min(theta);
+  vector[NTHRESH] rawCumTh;
+  real maxSpan = max(rawTheta) - min(rawTheta);
   threshold = maxSpan * rawThreshold;
-  cumTh = cumulative_sum(threshold);
+  rawCumTh = cumulative_sum(threshold);
 }
 model {
 
   $prior
-  theta ~ $theta_prior;
+  rawTheta ~ $theta_prior;
   $threshold_prior
 
   {
     int cmpStart = 1;
     for (rx in 1:numRefresh) {
       target += pairwise_logprob(rcat, weight, cmpStart, refresh[rx],
-                                 scale, alpha, theta[pa1[rx]], theta[pa2[rx]], cumTh);
+                                 scale, alpha, rawTheta[pa1[rx]], rawTheta[pa2[rx]], rawCumTh);
       cmpStart += refresh[rx];
     }
   }
 }
-generated quantities {
-  real thetaVar = variance(theta);
+generated quantities {$llDecl
+  $thetaPP
 $llBody}
 ];
 }
@@ -154,7 +162,7 @@ my $multivariateThresholdParam =
 
 my $multivariateThresholdTParamDecl =
   'vector[totalThresholds] threshold;
-  vector[totalThresholds] cumTh;';
+  vector[totalThresholds] rawCumTh;';
 
 my $multivariateThresholdTParam =
 'for (ix in 1:NITEMS) {
@@ -162,7 +170,7 @@ my $multivariateThresholdTParam =
     int from = TOFFSET[ix];
     int to = TOFFSET[ix] + NTHRESH[ix] - 1;
     threshold[from:to] = maxSpan * rawThreshold[from:to];
-    cumTh[from:to] = cumulative_sum(threshold[from:to]);
+    rawCumTh[from:to] = cumulative_sum(threshold[from:to]);
   }';
 
 my $multivariateQuickLikelihood =
@@ -174,15 +182,10 @@ my $multivariateQuickLikelihood =
       int to = TOFFSET[ix] + NTHRESH[ix] - 1;
       target += pairwise_logprob(rcat, weight, cmpStart, refresh[rx],
                                  scale[ix], alpha[ix], theta[pa1[rx], ix],
-                                 theta[pa2[rx], ix], cumTh[from:to]);
+                                 theta[pa2[rx], ix], rawCumTh[from:to]);
       cmpStart += refresh[rx];
     }
   }';
-
-my $multivariateLooDecl =
-  '
-  real log_lik[N];
-';
 
 my $multivariateLoo = '
 
@@ -198,7 +201,7 @@ my $multivariateLoo = '
       log_lik[cur:last] =
         pairwise_loo(rcat, weight, nout, cmpStart, refresh[rx],
                      scale[ix], alpha[ix],
-                     theta[pa1[rx],ix], theta[pa2[rx],ix], cumTh[from:to]);
+                     theta[pa1[rx],ix], theta[pa2[rx],ix], rawCumTh[from:to]);
       cmpStart += refresh[rx];
       cur += numOutcome[rx];
     }
@@ -206,9 +209,10 @@ my $multivariateLoo = '
 
 sub mkCorModel {
     my ($ll) = @_;
-    my $llDecl = $ll? $multivariateLooDecl : '';
+    my $llDecl = $ll? $looDecl : '';
     my $llBody = $ll? $multivariateLoo : '';
-    mvtDataCommon().
+    mvtDataCommon('
+  real corLKJPrior;').
 qq[
 parameters {
   $multivariateThresholdParam
@@ -227,12 +231,12 @@ transformed parameters {
   $multivariateThresholdTParam
 }
 model {
-  rawThetaCorChol ~ lkj_corr_cholesky(2);
+  rawThetaCorChol ~ lkj_corr_cholesky(corLKJPrior);
   for (pa in 1:NPA) {
     rawTheta[pa,] ~ std_normal();
   }
   $threshold_prior
-  $alpha_prior
+  for (ix in 1:NITEMS) alpha[ix] ~ $alpha_prior;
   $multivariateQuickLikelihood
 }
 generated quantities {$llDecl
@@ -244,7 +248,7 @@ generated quantities {$llDecl
 
 sub mkFactorModel {
     my ($ll, $psi) = @_;
-    my $llDecl = $ll? $multivariateLooDecl : '';
+    my $llDecl = $ll? $looDecl : '';
     my $llBody = $ll? $multivariateLoo : '';
 
     my $psiData = '';
@@ -276,7 +280,7 @@ sub mkFactorModel {
     }
 
     mvtDataCommon("
-  real alpha[NITEMS];
+  real propShape;
   int<lower=1> NFACTORS;
   real factorScalePrior[NFACTORS];$psiData
   int<lower=1> NPATHS;
@@ -297,11 +301,12 @@ sub mkFactorModel {
   }').
     qq[
 parameters {
+  real<lower=0> alpha[NITEMS];
   $multivariateThresholdParam$psiParam
   matrix[NPA,NFACTORS] rawFactor;      // do not interpret, see factor
   vector<lower=0,upper=1>[NPATHS] rawLoadings; // do not interpret, see factorLoadings
   matrix[NPA,NITEMS] rawUniqueTheta; // do not interpret, see uniqueTheta
-  vector<lower=0,upper=1>[NITEMS] rawUnique;      // do not interpret, see unique
+  vector<lower=-1,upper=1>[NITEMS] rawUnique;      // do not interpret, see unique
 }
 transformed parameters {
   $multivariateThresholdTParamDecl$psiTparam
@@ -309,7 +314,7 @@ transformed parameters {
   vector[NPATHS] rawPathProp;  // always positive
   real rawPerComponentVar[NITEMS,1+NFACTORS];
   for (ix in 1:NITEMS) {
-    theta[,ix] = rawUniqueTheta[,ix] * (2*rawUnique[ix]-1);
+    theta[,ix] = rawUniqueTheta[,ix] * rawUnique[ix];
     rawPerComponentVar[ix, 1] = variance(theta[,ix]);
   }
   for (fx in 1:NFACTORS) {
@@ -339,13 +344,15 @@ transformed parameters {
   $multivariateThresholdTParam
 }
 model {
+  for (ix in 1:NITEMS) alpha[ix] ~ $alpha_prior;
   $threshold_prior$latentPrior
-  rawLoadings ~ beta(3.0, 3.0);
-  rawUnique ~ beta(3.0, 3.0);
+  rawLoadings ~ beta(propShape, propShape);
+  rawUnique ~ uniform(-1,1);
   for (ix in 1:NITEMS) {
     rawUniqueTheta[,ix] ~ std_normal();
   }
   $multivariateQuickLikelihood
+  // 1.0 excessive, 1.5 not enough
   target += normal_lpdf(logit(0.5 + rawPathProp/2.0) | 0, pathScalePrior);
 }
 generated quantities {$llDecl
@@ -356,8 +363,9 @@ generated quantities {$llDecl
   {
     matrix[NPA,NITEMS] residual;
     for (ix in 1:NITEMS) {
-      residual[,ix] = rawUniqueTheta[,ix] * (2*rawUnique[ix]-1);
+      residual[,ix] = rawUniqueTheta[,ix] * rawUnique[ix];
       residual[,ix] -= mean(residual[,ix]);
+      residual[,ix] /= sd(residual[,ix]);
     }
     residualItemCor = crossprod(residual);
     residualItemCor = quad_form_diag(residualItemCor, 1.0 ./ sqrt(diagonal(residualItemCor)));
@@ -388,6 +396,7 @@ generated quantities {$llDecl
     }
   }
   for (fx in 1:NFACTORS) {
+    factor[,fx] -= mean(factor[,fx]);
     factor[,fx] /= sd(factor[,fx]);
   }$llBody
 }

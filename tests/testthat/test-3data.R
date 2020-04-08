@@ -52,11 +52,11 @@ test_that("findModel", {
 
 test_that("prepSingleFactorModel", {
   dl <- prepData(phyActFlowPropensity)
-  dl <- prepSingleFactorModel(dl, 0.9)
+  dl <- prepSingleFactorModel(dl)
 
   expect_equal(dl$NFACTORS, 1)
   expect_equal(dl$NPATHS, dl$NITEMS)
-  expect_equal(dl$factorScalePrior, as.array(0.9))
+  expect_equal(dl$factorScalePrior, as.array(1.2))
   expect_equal(dl$factorItemPath[1,],
                rep(1, dl$NITEMS))
   expect_equal(dl$factorItemPath[2,],
@@ -67,7 +67,7 @@ test_that("prepFactorModel", {
   pa <- phyActFlowPropensity[,setdiff(colnames(phyActFlowPropensity),
                                       c('goal1','feedback1'))]
   dl <- prepData(pa)
-  expect_error(prepFactorModel(dl, list(), c()),
+  expect_error(prepFactorModel(dl, list()),
                "No paths specified")
   expect_error(prepFactorModel(dl,
                         list(c('complex','skill','predict',
@@ -75,44 +75,15 @@ test_that("prepFactorModel", {
                                     'present', 'reward', 'chatter',
                                     'body'),
                              c('waiting','control','evaluated','spont'),
-                             c('novelty', 'waiting')),
-                        c(flow=0.9, f2=0.5, rc=0.2)),
+                             c('novelty', 'waiting'))),
                "paths must be named")
   expect_error(prepFactorModel(dl,
                                list(flow=c('complex','skill','predict',
-                                      'creative', 'novelty', 'stakes',
-                                      'present', 'reward', 'chatter',
-                                      'body'),
-                                    f2=c('waiting','control','evaluated','spont'),
-                                    rc=c('novelty', 'waiting')),
-                               c(0.9, 0.5, 0.2)),
-               "factorScalePrior must be named")
-  expect_error(prepFactorModel(dl,
-                               list(flow=c('complex','skill','predict',
                                            'creative', 'novelty', 'stakes',
                                            'present', 'reward', 'chatter',
                                            'body'),
                                     f2=c('waiting','control','evaluated','spont'),
-                                    rc=c('novelty', 'waiting')),
-                               c(flow=0.9)),
-               "Number of factors mismatch")
-  expect_error(prepFactorModel(dl,
-                               list(flow=c('complex','skill','predict',
-                                           'creative', 'novelty', 'stakes',
-                                           'present', 'reward', 'chatter',
-                                           'body'),
-                                    f2=c('waiting','control','evaluated','spont'),
-                                    rc=c('novelty', 'waiting')),
-                               c(flow=0.9, ralph=0.5, rc=0.2)),
-               "different factor names")
-  expect_error(prepFactorModel(dl,
-                               list(flow=c('complex','skill','predict',
-                                           'creative', 'novelty', 'stakes',
-                                           'present', 'reward', 'chatter',
-                                           'body'),
-                                    f2=c('waiting','control','evaluated','spont'),
-                                    rc=c('novelty')),
-                               c(flow=0.9, f2=0.5, rc=0.2)),
+                                    rc=c('novelty'))),
                "less than 2 indicators")
   expect_error(prepFactorModel(dl,
                                list(flow=c('complex','skill','predict',
@@ -120,16 +91,14 @@ test_that("prepFactorModel", {
                                            'present', 'reward', 'chatter',
                                            'bodies'),
                                     f2=c('waiting','control','evaluated','spont'),
-                                    rc=c('novelty', 'waiting')),
-                               c(flow=0.9, f2=0.5, rc=0.2)),
+                                    rc=c('novelty', 'waiting'))),
                "No matching item for factor")
   expect_error(prepFactorModel(dl,
                                list(flow=c('complex','skill','predict',
                                            'creative', 'novelty', 'stakes',
                                            'present', 'reward', 'chatter'),
                                     f2=c('waiting','control','evaluated','spont'),
-                                    rc=c('novelty', 'waiting')),
-                               c(flow=0.9, f2=0.5, rc=0.2)),
+                                    rc=c('novelty', 'waiting'))),
                "No factor predicts item")
   psi <- diag(3)
   psi[lower.tri(psi)] <- runif(3, 0, .8)
@@ -143,13 +112,12 @@ test_that("prepFactorModel", {
                                     'body'),
                              f2=c('waiting','control','evaluated','spont'),
                              rc=c('novelty', 'waiting')),
-                        c(flow=0.9, f2=0.5, rc=0.2),
-                        psi)
+                        psiScalePrior =  psi)
   expect_equal(dl$nameInfo$factor,
                c('flow','f2','rc'))
   expect_equal(dl$NFACTORS, 3)
   expect_equal(dl$NPATHS, 16)
-  expect_equal(dl$factorScalePrior, as.array(c(.9,.5,.2)))
+  expect_equal(dl$factorScalePrior, as.array(rep(1.2,3)))
   expect_equal(dl$NPSI, 3)
   expect_equivalent(dl$psiScalePrior, psi[lower.tri(psi)])
 })

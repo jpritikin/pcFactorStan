@@ -156,23 +156,11 @@ generateSingleFactorItems <- function(df, prop, th=0.5, name, ..., scale=1, alph
   generateItem(df, theta, th, scale=scale, alpha=alpha)
 }
 
-validateFactorModel <- function(items, path, factorScalePrior) {
+validateFactorModel <- function(items, path) {
   if (length(path) == 0) stop("No paths specified")
   n1 <- names(path)
-  n2 <- names(factorScalePrior)
   if (length(n1) == 0) {
     stop("paths must be named, the name is the name of the factor")
-  }
-  if (length(n2) == 0) {
-    stop("factorScalePrior must be named, the name is the name of the factor")
-  }
-  if (length(n1) != length(n2)) {
-    stop(paste("Number of factors mismatch between path",
-               length(path),"and factorScalePrior",
-               length(factorScalePrior)))
-  }
-  if (!setequal(n1, n2)) {
-    stop("path and factorScalePrior specify different factor names")
   }
   itemsPerFactor <- sapply(path, length)
   if (any(itemsPerFactor < 2)) {
@@ -207,7 +195,7 @@ ssqrt <- function(v) sign(v)*sqrt(abs(v))
 #'
 #' @details Path proportions (factor-to-item loadings) are sampled
 #'   from a logistic transformed normal distribution with scale
-#'   \code{factorScalePrior}. A few attempts are made to resample path
+#'   0.6. A few attempts are made to resample path
 #'   proportions if any of the item proportions sum to more than
 #'   1.0. An exception will be raised if repeated attempts fail to
 #'   produce viable proportion assignments.
@@ -235,7 +223,10 @@ ssqrt <- function(v) sign(v)*sqrt(abs(v))
 #' attr(df, "worth")
 #' @export
 #' @importFrom stats rnorm sd plogis rbinom
-generateFactorItems <- function(df, path, factorScalePrior, th=0.5, name, ..., scale=1, alpha=1) {
+generateFactorItems <- function(df, path, factorScalePrior=deprecated(), th=0.5, name, ..., scale=1, alpha=1) {
+  if (lifecycle::is_present(factorScalePrior)) {
+    deprecate_warn("1.5.0", "prepSingleFactorModel(factorScalePrior = )")
+  }
   palist <- verifyIsData(df)
   items <- Reduce(union, path, c())
   numItems <- length(items)
@@ -244,7 +235,7 @@ generateFactorItems <- function(df, path, factorScalePrior, th=0.5, name, ..., s
     name <- paste0('i', num:(num+numItems-1))
   }
   assertNameUnused(df, name)
-  validateFactorModel(items, path, factorScalePrior)
+  validateFactorModel(items, path)
 
   numFactors <- length(path)
   itemsPerFactor <- sapply(path, length)
@@ -257,8 +248,7 @@ generateFactorItems <- function(df, path, factorScalePrior, th=0.5, name, ..., s
     for (fx in 1:numFactors) {
       sel <- factorItemPath[1,]==fx
       prop[fx+1, factorItemPath[2,sel]] <-
-        2*(plogis(abs(rnorm(sum(factorItemPath[1,]==fx),
-                            sd=factorScalePrior[fx]))) - 0.5)
+        2*(plogis(abs(rnorm(sum(factorItemPath[1,]==fx), sd=.6))) - 0.5)
     }
     if (all(colSums(prop) < .99)) break
     propTry <- propTry + 1L

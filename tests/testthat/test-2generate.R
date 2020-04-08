@@ -86,19 +86,12 @@ test_that("generateFactorItems", {
   set.seed(1)
   df <- twoLevelGraph(letters[1:10], 100)
   df <- generateFactorItems(df, list(f1=paste0('i',1:4),
-                                     f2=paste0('i',2:4)),
-                            c(f1=0.9, f2=0.5))
+                                     f2=paste0('i',2:4)))
   # This is a nonsensical way to look at the data.
   # Just ensure that nothing has changed.
   c1 <- cov(df[,paste0('i',1:4)])
   # cat(deparse(round(c1[lower.tri(c1, diag = TRUE)],3)))
   expect_equal(c1[lower.tri(c1, diag = TRUE)],
-               c(0.768, -0.024, -0.03, -0.051, 0.854, 0.101, -0.038,
-                 0.808,  0.121, 0.735),
+               c(0.775, -0.048, 0.099, -0.149, 0.795, 0.016, 0.038, 0.834, -0.172,  0.735),
                tolerance=1e-3, scale=1)
-
-  expect_error(generateFactorItems(df, list(f1=paste0('i',1:4),
-                                     f2=paste0('i',2:4)),
-                            c(f1=100, f2=100)),
-               "factorScalePrior is too large")
 })
