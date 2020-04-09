@@ -23,7 +23,7 @@ test_that("unidim", {
   dl$varCorrection <- 2.0
   m1 <- findModel("unidim_adapt")
   f1 <- sampling(m1, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
-  expect_equal(get_logposterior(f1)[[1]], -6162.183, tolerance=1e-2, scale=1)
+  expect_equal(get_logposterior(f1)[[1]], -3612.551, tolerance=1e-2, scale=1)
 
   dl$scale <- 1.0
   m2 <- findModel("unidim_ll")

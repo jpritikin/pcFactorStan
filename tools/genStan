@@ -70,13 +70,13 @@ sub mkUnidim {
     my $xdata = $adapt? "\n  real alpha = 1.749;" : '';
     my $par = $adapt? "sigma" : "alpha";
     my $scaleDef = $adapt? "
-  real scale = sd(rawTheta) ^ varCorrection;" : "";
-    my $theta_prior = $adapt? "normal(0, sqrt(sigma))" : "std_normal()";
+  vector[NPA] theta = sqrt(sigma) * rawTheta;
+  real scale = sd(theta) ^ varCorrection;" : "";
+    my $theta = $adapt? "theta" : "rawTheta";
     my $prior = $adapt? 'sigma ~ inv_gamma(1, 1);' : "alpha ~ $alpha_prior;";
     my $llDecl = $ll? $looDecl : '';
     my $llBody = $ll? $unidim_ll : '';
-    my $thetaPP = $adapt? "vector[NPA] theta = rawTheta;
-  real thetaVar = variance(theta);" : "vector[NPA] theta = rawTheta;
+    my $thetaPP = $adapt? "real thetaVar = variance(theta);" : "vector[NPA] theta = rawTheta;
   theta -= mean(theta);
   theta /= sd(theta);";
 
@@ -102,21 +102,21 @@ parameters {
 transformed parameters {$scaleDef
   vector[NTHRESH] threshold;
   vector[NTHRESH] rawCumTh;
-  real maxSpan = max(rawTheta) - min(rawTheta);
+  real maxSpan = max($theta) - min($theta);
   threshold = maxSpan * rawThreshold;
   rawCumTh = cumulative_sum(threshold);
 }
 model {
 
   $prior
-  rawTheta ~ $theta_prior;
+  rawTheta ~ std_normal();
   $threshold_prior
 
   {
     int cmpStart = 1;
     for (rx in 1:numRefresh) {
       target += pairwise_logprob(rcat, weight, cmpStart, refresh[rx],
-                                 scale, alpha, rawTheta[pa1[rx]], rawTheta[pa2[rx]], rawCumTh);
+                                 scale, alpha, ${theta}[pa1[rx]], ${theta}[pa2[rx]], rawCumTh);
       cmpStart += refresh[rx];
     }
   }

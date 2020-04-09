@@ -33,29 +33,29 @@ parameters {
   real<lower=0> sigma;
 }
 transformed parameters {
-  real scale = sd(rawTheta) ^ varCorrection;
+  vector[NPA] theta = sqrt(sigma) * rawTheta;
+  real scale = sd(theta) ^ varCorrection;
   vector[NTHRESH] threshold;
   vector[NTHRESH] rawCumTh;
-  real maxSpan = max(rawTheta) - min(rawTheta);
+  real maxSpan = max(theta) - min(theta);
   threshold = maxSpan * rawThreshold;
   rawCumTh = cumulative_sum(threshold);
 }
 model {
 
   sigma ~ inv_gamma(1, 1);
-  rawTheta ~ normal(0, sqrt(sigma));
+  rawTheta ~ std_normal();
   rawThreshold ~ beta(1.1, 2);
 
   {
     int cmpStart = 1;
     for (rx in 1:numRefresh) {
       target += pairwise_logprob(rcat, weight, cmpStart, refresh[rx],
-                                 scale, alpha, rawTheta[pa1[rx]], rawTheta[pa2[rx]], rawCumTh);
+                                 scale, alpha, theta[pa1[rx]], theta[pa2[rx]], rawCumTh);
       cmpStart += refresh[rx];
     }
   }
 }
 generated quantities {
-  vector[NPA] theta = rawTheta;
   real thetaVar = variance(theta);
 }
