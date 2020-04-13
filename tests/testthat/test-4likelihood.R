@@ -101,7 +101,7 @@ test_that("calibrateItems", {
   expect_true(all(result[1:2,'n_eff'] > 200))
   expect_true(all(result[1:2,'Rhat'] < 1.015))
   # cat(deparse(round(result[,'scale'],3)))
-  expect_equal(result[,'scale'], c(0.6, 0.673, 0.147),
+  expect_equal(result[,'scale'], c(0.566, 0.646, 0.081),
                tolerance=.01, scale=1)
 })
 

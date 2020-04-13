@@ -358,7 +358,7 @@ prepFactorModel <- function(data, path, factorScalePrior=deprecated(),
 #' @seealso \code{\link{calibrateItems}}, \code{\link{outlierTable}}
 #' @examples
 #' dl <- prepData(phyActFlowPropensity[,c(1,2,3)])
-#' dl$varCorrection <- 2.0
+#' dl$varCorrection <- 5.0
 #' \donttest{pcStan('unidim_adapt', data=dl)}  # takes more than 5 seconds
 #' @importFrom rstan sampling
 #' @export
@@ -382,7 +382,7 @@ pcStan <- function(model, data, ...) {
 #' Then the \sQuote{unidim_adapt} model is fit to each item individually.
 #' A larger \code{varCorrection} will obtain a more accurate
 #' \code{scale}, but is also more likely to produce an intractable
-#' model. A good compromise is between 2.0 and 4.0.
+#' model. A good compromise is between 5.0 and 9.0.
 #'
 #' @return
 #' A data.frame (one row per item) with the following columns:
@@ -407,7 +407,7 @@ pcStan <- function(model, data, ...) {
 #' @importMethodsFrom rstan summary
 #' @importFrom rstan get_num_divergent get_max_treedepth_iterations get_low_bfmi_chains
 #' @export
-calibrateItems <- function(df, iter=2000L, chains=4L, varCorrection=3.0, maxAttempts=5L, ...) {
+calibrateItems <- function(df, iter=2000L, chains=4L, varCorrection=5.0, maxAttempts=5L, ...) {
   df <- filterGraph(df)
   df <- normalizeData(df)
   vCol <- match(paste0('pa',1:2), colnames(df))

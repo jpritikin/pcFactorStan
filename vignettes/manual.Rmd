@@ -111,7 +111,7 @@ One thing it does not do is pick a `varCorrection` factor. The `varCorrection` d
 
 ```{r}
 dl <- prepData(phyActFlowPropensity[,c(paste0('pa',1:2), 'skill')])
-dl$varCorrection <- 2.0
+dl$varCorrection <- 5.0
 ```
 
 Next we fit the model using the `pcStan()` function, which is a wrapper for `stan()` from **rstan**. We also choose the number of chains.
