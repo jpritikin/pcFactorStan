@@ -677,7 +677,7 @@ responseCurve <- function(dl, fit, responseNames, item=dl$nameInfo$item,
 #' @param name a parameter name
 #' @return the name without the square bracket parameter indexing
 #' @examples
-#' withoutIndex("foo[1,2")
+#' withoutIndex("foo[1,2]")
 #' @export
 withoutIndex <- function(name) {
   sub("\\[[\\d,]+\\]$", "", name, perl=TRUE)
