@@ -61,9 +61,13 @@ test_that("parInterval+parDistributionFor", {
   set.seed(1)
   dl1 <- prepData(phyActFlowPropensity[,c(1,2,3)])
   dl1$scale <- 1.0
+  expect_error(parInterval(dl1, "alpha", nameVec="alpha"),
+               "must be a stanfit object")
   m1 <- findModel("unidim")
   f1 <- sampling(m1, dl1, chains=1, cores=0, iter=100, refresh=0)
   label <- "discrimination"
+  expect_error(parInterval(f1, "alpha", nameVec=paste0("alpha",1:3)),
+               "pars and nameVec must be the same length.")
   pi <- parInterval(f1, "alpha", nameVec="alpha")
   expect_equal(colnames(pi)[4], "alpha")
   pi <- parInterval(f1, "alpha", "alpha", label)
@@ -72,8 +76,15 @@ test_that("parInterval+parDistributionFor", {
   expect_equal(rownames(pi), "alpha")
   expect_equal(colnames(pi)[1:3], c('L','M','U'))
   expect_equal(colnames(pi)[4], label)
+  expect_error(parDistributionFor(dl1, pi),
+               "must be a stanfit object")
   pd <- parDistributionFor(f1, pi)
   expect_equivalent(c(table(pd$value < pi$M)), c(25,25))
+  expect_equal(nrow(pd), 50)
+  pd <- parDistributionFor(f1, pi, samples = 5)
+  expect_equal(nrow(pd), 5)
+  expect_error(parDistributionCustom(f1, pars = "alpha", nameVec = paste0("alpha",1:2)),
+               "pars and nameVec must be the same length.")
 
   label <- "activity"
   pi <- parInterval(f1, "theta", dl1$nameInfo$pa)

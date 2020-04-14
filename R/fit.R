@@ -706,10 +706,17 @@ withoutIndex <- function(name) {
 #' \donttest{ vignette('manual', 'pcFactorStan') }
 parInterval <- function(fit, pars, nameVec,
                         label=withoutIndex(pars[1]), width=0.8) {
+  if (!is(fit, "stanfit")) stop("fit must be a stanfit object")
+  if (width <= 0 || width >= 1) stop("width must be in the interval (0,1)")
   probs <- 0.5 + c(-width/2, 0, width/2)
   interval <- summary(fit, pars=pars, probs=probs)$summary[,4:6,drop=FALSE]
   colnames(interval) <- c("L","M","U")
   interval <- as.data.frame(interval)
+  if (nrow(interval) != length(nameVec)) {
+    stop(paste("pars and nameVec must be the same length. Currently",
+               "pars is length", nrow(interval),
+               "but nameVec is length", length(nameVec)))
+  }
   interval[[label]] <- factor(nameVec, levels=nameVec)
   interval
 }
@@ -736,7 +743,13 @@ parInterval <- function(fit, pars, nameVec,
 #' \donttest{ vignette('manual', 'pcFactorStan') }
 parDistributionCustom <- function(fit, pars, nameVec,
                                   label=withoutIndex(pars[1]), samples=500) {
+  if (!is(fit, "stanfit")) stop("fit must be a stanfit object")
   colSet <- extract(fit, pars)
+  if (length(colSet) != length(nameVec)) {
+    stop(paste("pars and nameVec must be the same length. Currently",
+               "pars is length", length(colSet),
+               "but nameVec is length", length(nameVec)))
+  }
   nextCol <- 1L
   pick <- c()
   tall <- NULL
@@ -760,5 +773,6 @@ parDistributionCustom <- function(fit, pars, nameVec,
 #' @rdname parDistributionCustom
 #' @export
 parDistributionFor <- function(fit, pi, samples=500) {
-  parDistributionCustom(fit, rownames(pi), nameVec=pi[[4]], label=colnames(pi)[4])
+  parDistributionCustom(fit, rownames(pi), nameVec=pi[[4]],
+                        label=colnames(pi)[4], samples=samples)
 }
