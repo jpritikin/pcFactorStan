@@ -62,7 +62,7 @@ parameters {
   matrix[NPA,NFACTORS] rawFactor;      // do not interpret, see factor
   vector<lower=0,upper=1>[NPATHS] rawLoadings; // do not interpret, see factorLoadings
   matrix[NPA,NITEMS] rawUniqueTheta; // do not interpret, see uniqueTheta
-  vector<lower=-1,upper=1>[NITEMS] rawUnique;      // do not interpret, see unique
+  vector<lower=0,upper=1>[NITEMS] rawUnique;      // do not interpret, see unique
 }
 transformed parameters {
   vector[totalThresholds] threshold;
@@ -72,7 +72,7 @@ transformed parameters {
   vector[NPATHS] rawPathProp;  // always positive
   real rawPerComponentVar[NITEMS,1+NFACTORS];
   for (ix in 1:NITEMS) {
-    theta[,ix] = rawUniqueTheta[,ix] * rawUnique[ix];
+    theta[,ix] = rawUniqueTheta[,ix] * (2*rawUnique[ix]-1);
     rawPerComponentVar[ix, 1] = variance(theta[,ix]);
   }
   for (fx in 1:NFACTORS) {
@@ -123,7 +123,7 @@ model {
     rawFactor[xx,] ~ multi_normal_cholesky_lpdf(rep_vector(0, NFACTORS), CholPsi);
   }
   rawLoadings ~ beta(propShape, propShape);
-  rawUnique ~ uniform(-1,1);
+  rawUnique ~ beta(propShape, propShape);
   for (ix in 1:NITEMS) {
     rawUniqueTheta[,ix] ~ std_normal();
   }
@@ -150,7 +150,7 @@ generated quantities {
   {
     matrix[NPA,NITEMS] residual;
     for (ix in 1:NITEMS) {
-      residual[,ix] = rawUniqueTheta[,ix] * rawUnique[ix];
+      residual[,ix] = rawUniqueTheta[,ix] * (2*rawUnique[ix]-1);
       residual[,ix] -= mean(residual[,ix]);
       residual[,ix] /= sd(residual[,ix]);
     }

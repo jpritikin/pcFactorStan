@@ -134,7 +134,7 @@ prepCleanData <- function(df) {
     # correlation model
     corLKJPrior = 2.5,  # 2.0 not quite enough
     # factor model
-    propShape = 4.0   # 1.1, 2.0, 3.0 not quite enough; 6.0 exhibits quite some bias
+    propShape = 3.0   # 2.0 give divegence, 4.0 okay, but try to reduce?
   )
   if (any(is.na(match(preppedDataFields, names(dl))))) {
     stop("Bug in prepCleanData(); contact developers") # nocov

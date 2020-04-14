@@ -53,7 +53,7 @@ test_that("factor", {
   dl <- prepSingleFactorModel(dl)
   m2 <- findModel("factor1_ll")
   f2 <- sampling(m2, dl, chains=1, cores=0, iter=1, seed=1,warmup=0, refresh=0)
-  expect_equal(get_logposterior(f2)[[1]], -60816.93, tolerance=1e-1, scale=1)
+  expect_equal(get_logposterior(f2)[[1]], -60859.06, tolerance=1e-1, scale=1)
   #cat(deparse(round(fivenum(extract(f2)$log_lik[1,]), 3)))
   expect_equal(fivenum(extract(f2)$log_lik[1,]),
                c(-33.319, -3.754, -1.989, -0.963, 0), tolerance=1e-2, scale=1)
