@@ -71,6 +71,7 @@ library(pcFactorStan)
 library(loo)
 library(qgraph)
 library(ggplot2)
+library(Matrix)
 ```
 
 Next we take a peek at the data.
@@ -239,11 +240,13 @@ Ah, much better. Now we can inspect the correlation matrix. There are
 many ways to visualize a correlation matrix. One of my favorite
 ways is to plot it using the **qgraph** package,
 
-```{r covPlot, cache=TRUE}
-covItemNames <- dl$nameInfo$item
-tc <- summary(fit2, pars=c("thetaCor"), probs=c(.5))$summary[,'50%']
-tcor <- matrix(tc, length(covItemNames), length(covItemNames))
-dimnames(tcor) <- list(covItemNames, covItemNames)
+```{r corPlot, cache=TRUE}
+corItemNames <- dl$nameInfo$item
+tc <- summary(fit2, pars=c("thetaCor"), probs=c(.1,.5,.9))$summary
+tcor <- matrix(tc, length(corItemNames), length(corItemNames))
+tcor[sign(tc[,'10%']) != sign(tc[,'90%'])] <- 0  # delete faint edges
+dimnames(tcor) <- list(corItemNames, corItemNames)
+tcor <- nearPD(tcor, corr=TRUE)$mat
 
 qgraph(tcor, layout = "spring", graph = "cor", labels=colnames(tcor),
        legend.cex = 0.3,
@@ -300,7 +303,7 @@ stay with the simplest factor model, a single factor that predicts all items.
 
 ```{r factorData1, cache=TRUE}
 pafp <- pafp[,c(paste0('pa',1:2),
-             setdiff(covItemNames, c('spont','control','evaluated','waiting')))]
+             setdiff(corItemNames, c('spont','control','evaluated','waiting')))]
 pafp <- normalizeData(filterGraph(pafp))
 dl <- prepCleanData(pafp)
 dl <- prepSingleFactorModel(dl)
@@ -462,7 +465,6 @@ preferable since the scale is arbitrary and standardized.
 ```{r pathProp, cache=TRUE}
 pi <- parInterval(fit3, 'pathProp', dl$nameInfo$item, label='item')
 pi <- pi[order(abs(pi$M)),]
-pi$item <- factor(pi$item, levels=pi$item)
 
 ggplot(pi) +
   geom_vline(xintercept=0, color="green") +
@@ -480,11 +482,10 @@ Finally, we can plot the factor scores.
 pick <- paste0('factor[',match(pa11, dl$nameInfo$pa),',1]')
 pi <- parInterval(fit3, pick, pa11, label='activity')
 pi <- pi[order(pi$M),]
-pi$activity <- factor(pi$activity, levels=pi$activity)
 
 ggplot(pi) +
   geom_vline(xintercept=0, color="green") +
-  geom_jitter(data=parDistributionFor(fit3, pi, samples=250),
+  geom_jitter(data=parDistributionFor(fit3, pi, samples=200),
               aes(value, activity), height = 0.35, alpha=.05) +
   geom_segment(aes(y=activity, yend=activity, x=L, xend=U),
                color="yellow", alpha=.5) +
@@ -497,33 +498,31 @@ then the residual item activity scores should be uncorrelated.
 Let us examine the residual item correlation matrix.
 
 ```{r residualItemCor, cache=TRUE}
-ric <- summary(fit3, pars=c('residualItemCor'), prob=c(.1,.5,.9))$summary
-rl <- matrix(ric[,'10%'], length(dl$nameInfo$item), length(dl$nameInfo$item),
-       dimnames=list(dl$nameInfo$item,dl$nameInfo$item))
-r50 <- matrix(ric[,'50%'], length(dl$nameInfo$item), length(dl$nameInfo$item),
-              dimnames=list(dl$nameInfo$item,dl$nameInfo$item))
-ru <- matrix(ric[,'90%'], length(dl$nameInfo$item), length(dl$nameInfo$item),
-       dimnames=list(dl$nameInfo$item,dl$nameInfo$item))
-ric5 <- fivenum(r50[lower.tri(r50)])
-mask <- sign(rl) == -sign(ru) # small, not statistically significant
-r50[mask] <- 0
-diag(r50) <- 2*max(abs(r50[lower.tri(r50)]))  # rescale for better visualization
-
-qgraph(r50, layout = "spring", graph = "cor", labels=colnames(r50),
-       legend.cex = 0.3,
-       cut = 0.3, maximum = 1, minimum = 0, esize = 20,
-       vsize = 7, repulsion = 0.8, negDashed=TRUE, theme="colorblind")
+m <- matrix(apply(expand.grid(r=1:dl$NITEMS, c=1:dl$NITEMS), 1,
+      function(x) paste0("residualItemCor[",x['r'],",",x['c'],"]")),
+      dl$NITEMS, dl$NITEMS)
+n <- matrix(apply(expand.grid(r=dl$nameInfo$item, c=dl$nameInfo$item), 1,
+                  function(x) paste0(x['r'],":",x['c'])),
+            dl$NITEMS, dl$NITEMS)
+pi <- parInterval(fit3, m[lower.tri(m)], n[lower.tri(n)], label='cor')
+pi <- pi[abs(pi$M) > .08,]
+pi <- pi[order(-abs(pi$M)),]
+ggplot(pi) +
+  geom_vline(xintercept=0, color="green") +
+  geom_jitter(data=parDistributionFor(fit3, pi, samples=800),
+              aes(value, cor), height = 0.35, alpha=.05) +
+  geom_segment(aes(y=cor, yend=cor, x=L, xend=U),
+               color="yellow", alpha=.5) +
+  geom_point(aes(x=M, y=cor), color="red", size=1) +
+  theme(axis.title.y=element_blank())
 ```
 
-Median residual correlations ranged from `r ric5[1]` to `r ric5[5]`.
-To reduce visual clutter,
-small correlations with 80\% posterior intervals crossing zero were hidden.
-This is conservative; almost none of the correlations would remain
-if a 90\% interval was used instead, indicating adequate model fit.
-_Stakes_ is an ideal item, least correlated with other items.
-These faint residual correlations are hard to interpret.
-It seems likely that any survey measure is going to exhibit
+Many survey measures are going to exhibit
 some faint correlations of this nature.
+Residual correlations can suggest items
+that could benefit from refinement. Item _chatter_ is involved in
+relatively high residual correlations. Thought
+might be give to splitting this item or rewording it.
 
 And there you have it. If you have not done so already,
 go find a dojo and commence study of martial arts!
@@ -540,7 +539,7 @@ from the sampling output.
 ## Latent worths
 
 Latent worths are estimated by `theta` parameters. `theta` is always
-standard normally distributed because scale is arbitrary.
+standard normally distributed.
 
 ## Thresholds
 
@@ -578,7 +577,9 @@ the prior if divergences are observed.
 
 ## Factor
 
-`factor` scores are standard normally distributed. `rawLoadings` are
+`factor` scores are standard normally distributed.
+`pathProp` is shaped by two priors that act on different parts
+of the distribution. `rawLoadings` are
 distributed `beta(propShape, propShape)` with `propShape` set to 4.0
 by default. `rawLoadings` has an indirect influence on `pathProp`. The
 quantity `2*rawLoadings-1` is used to scale the factor scores, but
