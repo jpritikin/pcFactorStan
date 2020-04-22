@@ -275,6 +275,9 @@ ggplot(df) +
   guides(color=guide_legend(override.aes=list(alpha = 1, size=1)))
 ```
 
+We plot response curves from the correlation model and not the factor model
+because the factor model is expected to report slightly
+inflated discrimination estimates.
 These response curves are a function of the `thresholds`, `scale`,
 and `alpha` parameters.
 The ability of an item to discriminate amongst objects is
@@ -337,23 +340,6 @@ print(max(allPars[,'Rhat']))
 ```
 
 Looks good!
-
-We can take a look at the item response curves.
-They look similar to the corresponding curves
-from the correlation model.
-
-```{r responseCurvesF, cache=TRUE}
-df <- responseCurve(dl, fit3,
-  item=setdiff(dl$nameInfo$item, c('spont','control','evaluated','waiting')),
-  responseNames=c("much more","somewhat more", 'equal',
-                  "somewhat less", "much less"))
-ggplot(df) +
-  geom_line(aes(x=worthDiff, y=prob, color=response,linetype=response,
-                group=responseSample), size=.2, alpha=.2) +
-  xlab("difference in latent worths") + ylab("probability") +
-  ylim(0,1) + facet_wrap(~item, scales="free_x") +
-  guides(color=guide_legend(override.aes=list(alpha = 1, size=1)))
-```
 
 Let us see which data are the most unexpected by the model.
 We create a `loo` object and inspect the summary output.

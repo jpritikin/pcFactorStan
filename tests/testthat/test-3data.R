@@ -100,24 +100,16 @@ test_that("prepFactorModel", {
                                     f2=c('waiting','control','evaluated','spont'),
                                     rc=c('novelty', 'waiting'))),
                "No factor predicts item")
-  psi <- diag(3)
-  psi[lower.tri(psi)] <- runif(3, 0, .8)
-  psi[upper.tri(psi)] <- t(psi)[upper.tri(psi)]
-  fname <- c('flow','f2','rc')
-  dimnames(psi) <- list(fname, fname)
   dl <- prepFactorModel(dl,
                         list(flow=c('complex','skill','predict',
                                     'creative', 'novelty', 'stakes',
                                     'present', 'reward', 'chatter',
                                     'body'),
                              f2=c('waiting','control','evaluated','spont'),
-                             rc=c('novelty', 'waiting')),
-                        psiScalePrior =  psi)
+                             rc=c('novelty', 'waiting')))
   expect_equal(dl$nameInfo$factor,
                c('flow','f2','rc'))
   expect_equal(dl$NFACTORS, 3)
   expect_equal(dl$NPATHS, 16)
   expect_equal(dl$factorScalePrior, as.array(rep(1.2,3)))
-  expect_equal(dl$NPSI, 3)
-  expect_equivalent(dl$psiScalePrior, psi[lower.tri(psi)])
 })

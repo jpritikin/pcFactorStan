@@ -251,38 +251,39 @@ sub mkFactorModel {
     my $llDecl = $ll? $looDecl : '';
     my $llBody = $ll? $multivariateLoo : '';
 
-    my $psiData = '';
     my $psiParam = '';
+    my $psiTparamDecl = '';
     my $psiTparam = '';
+    my $rawFactor = 'rawFactor';
     my $latentPrior = '
   rawFactor[,1] ~ std_normal();';
+    my $psiGenQuantDecl = '';
+    my $psiFlipSign = '';
     if ($psi) {
-	$psiData = '
-  int<lower=1> NPSI;  // = NFACTORS * (NFACTORS-1) / 2;
-  real psiScalePrior[NPSI];';
-	$psiParam = '
-  corr_matrix[NFACTORS] Psi;';
-	$psiTparam = '
-  cholesky_factor_corr[NFACTORS] CholPsi = cholesky_decompose(Psi);';
-	$latentPrior = '
-  {
-    int px=1;
-    for (cx in 1:(NFACTORS-1)) {
-      for (rx in (cx+1):NFACTORS) {
-        target += normal_lpdf(logit(0.5 + Psi[rx,cx]/2.0) | 0, psiScalePrior[px]);
-        px += 1;
-      }
-    }
-  }
+      $psiParam = '
+  cholesky_factor_corr[NFACTORS] CholPsi;';
+      $psiTparamDecl = '
+  matrix[NPA,NFACTORS] rawFactorPsi;';
+      $psiTparam = "
+  rawFactorPsi = rawFactor * CholPsi';";
+      $rawFactor = 'rawFactorPsi';
+      $latentPrior = '
+  CholPsi ~ lkj_corr_cholesky(2.5);
   for (xx in 1:NPA) {
-    rawFactor[xx,] ~ multi_normal_cholesky_lpdf(rep_vector(0, NFACTORS), CholPsi);
+    rawFactor[xx,] ~ std_normal();
   }';
+      $psiGenQuantDecl = "
+  matrix[NFACTORS,NFACTORS] Psi = CholPsi * CholPsi';";
+      $psiFlipSign = '
+      Psi[,fx] = -Psi[,fx];
+      Psi[fx,] = -Psi[fx,];
+      Psi[fx,fx] = -Psi[fx,fx];';
     }
 
     mvtDataCommon("
   real propShape;
   int<lower=1> NFACTORS;
-  real factorScalePrior[NFACTORS];$psiData
+  real factorScalePrior[NFACTORS];
   int<lower=1> NPATHS;
   int factorItemPath[2,NPATHS];  // 1 is factor index, 2 is item index",
 		 '
@@ -309,7 +310,7 @@ parameters {
   vector<lower=0,upper=1>[NITEMS] rawUnique;      // do not interpret, see unique
 }
 transformed parameters {
-  $multivariateThresholdTParamDecl$psiTparam
+  $multivariateThresholdTParamDecl$psiTparamDecl
   matrix[NPA,NITEMS] theta;
   vector[NPATHS] rawPathProp;  // always positive
   real rawPerComponentVar[NITEMS,1+NFACTORS];
@@ -319,11 +320,11 @@ transformed parameters {
   }
   for (fx in 1:NFACTORS) {
     for (ix in 1:NITEMS) rawPerComponentVar[ix,1+fx] = 0;
-  }
+  }$psiTparam
   for (px in 1:NPATHS) {
     int fx = factorItemPath[1,px];
     int ix = factorItemPath[2,px];
-    vector[NPA] theta1 = (2*rawLoadings[px]-1) * rawFactor[,fx];
+    vector[NPA] theta1 = (2*rawLoadings[px]-1) * ${rawFactor}[,fx];
     rawPerComponentVar[ix,1+fx] = variance(theta1);
     theta[,ix] += theta1;
   }
@@ -357,8 +358,8 @@ model {
 }
 generated quantities {$llDecl
   vector[NPATHS] pathProp = rawPathProp;
-  matrix[NPA,NFACTORS] factor = rawFactor;
-  matrix[NITEMS,NITEMS] residualItemCor;
+  matrix[NPA,NFACTORS] factor = ${rawFactor};
+  matrix[NITEMS,NITEMS] residualItemCor;$psiGenQuantDecl
 
   {
     matrix[NPA,NITEMS] residual;
@@ -389,7 +390,7 @@ generated quantities {$llDecl
     }
     for (fx in 1:NFACTORS) {
       if (!rawNegateFactor[fx]) continue;
-      factor[,fx] = -factor[,fx];
+      factor[,fx] = -factor[,fx];$psiFlipSign
     }
     for (fx in 1:NPATHS) {
       if (pathLoadings[fx] < 0) pathProp[fx] = -pathProp[fx];

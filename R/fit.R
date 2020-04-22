@@ -254,11 +254,16 @@ prepSingleFactorModel <- function(data, factorScalePrior=deprecated()) {
     deprecate_warn("1.5.0", "prepSingleFactorModel(factorScalePrior = )")
   }
   verifyIsPreppedData(data)
-  data$factorScalePrior <- as.array(1.2)
   ni <- data$NITEMS
   data$factorItemPath <- matrix(c(rep(1,ni), 1:ni), nrow=2, byrow=TRUE)
   data$NFACTORS <- 1L
   data$NPATHS <- ni
+  data <- setFactorScalePrior(data)
+  data
+}
+
+setFactorScalePrior <- function(data) {
+  data$factorScalePrior <- as.array(rep(1.2, data$NFACTORS))
   data
 }
 
@@ -267,77 +272,47 @@ prepSingleFactorModel <- function(data, factorScalePrior=deprecated()) {
 #' Specify a factor model with an arbitrary number of factors and
 #' arbitrary factor-to-item structure.
 #'
-#' @details Both \code{factorScalePrior} and \code{psiScalePrior} are
-#'   in the same units. A logistic transformation is applied to the
-#'   signed proportion or correlation such that the parameter value
-#'   becomes an unbounded real. The prior is a zero mean normal on
-#'   this value with the given standard deviation.
-#'
 #' @template detail-factorspec
 #' @template args-path
 #' @template args-factorScalePrior
 #' @template args-data
-#' @param psiScalePrior matrix of priors for factor correlations
+#' @param psiScalePrior matrix of priors for factor correlations (deprecated)
 #' @template return-datalist
 #' @examples
 #' pa <- phyActFlowPropensity[,setdiff(colnames(phyActFlowPropensity),
 #'                                     c('goal1','feedback1'))]
 #' dl <- prepData(pa)
-#' psi <- diag(3)
-#' psi[lower.tri(psi)] <- runif(3, 0, .8)
-#' psi[upper.tri(psi)] <- t(psi)[upper.tri(psi)]
-#' fname <- c('flow','f2','rc')
-#' dimnames(psi) <- list(fname, fname)
 #' dl <- prepFactorModel(dl,
 #'                       list(flow=c('complex','skill','predict',
 #'                                   'creative', 'novelty', 'stakes',
 #'                                   'present', 'reward', 'chatter',
 #'                                   'body'),
 #'                            f2=c('waiting','control','evaluated','spont'),
-#'                            rc=c('novelty', 'waiting')),
-#'                       psiScalePrior=psi)
+#'                            rc=c('novelty', 'waiting')))
 #' str(dl)
 #' @family factor model
 #' @family data preppers
 #' @seealso To simulate data from a factor model: \link{generateFactorItems}
 #' @export
 prepFactorModel <- function(data, path, factorScalePrior=deprecated(),
-                            psiScalePrior=NULL) {
+                            psiScalePrior=deprecated()) {
   if (lifecycle::is_present(factorScalePrior)) {
-    deprecate_warn("1.5.0", "prepSingleFactorModel(factorScalePrior = )")
+    deprecate_warn("1.5.0", "prepFactorModel(factorScalePrior = )")
+  }
+  if (lifecycle::is_present(psiScalePrior)) {
+    deprecate_warn("1.5.0", "prepFactorModel(psiScalePrior = )")
   }
   verifyIsPreppedData(data)
   items <- data$nameInfo$item
   validateFactorModel(items, path)
   itemsPerFactor <- sapply(path, length)
-  data$factorScalePrior <- as.array(rep(1.2, length(names(path)))) # factor out TODO
   data$factorItemPath <- matrix(c(rep(1:length(itemsPerFactor), itemsPerFactor),
                                   unlist(lapply(path, function(x) match(x, items)))),
                                 nrow=2, byrow=TRUE)
   data$NFACTORS <- length(names(path))
-  if (length(path) > 1) {
-    if (missing(psiScalePrior)) {
-      stop("Specify psiScalePrior for correlations between factors")
-    }
-    if (length(colnames(psiScalePrior)) != length(path)) {
-      stop("psiScalePrior must have dimnames")
-    }
-    if (any(colnames(psiScalePrior) != rownames(psiScalePrior))) {
-      stop("psiScalePrior must have identical row and column names")
-    }
-    if (any(psiScalePrior != t(psiScalePrior))) {
-      stop("psiScalePrior must be symmetric")
-    }
-    sel <- match(names(path), colnames(psiScalePrior))
-    if (any(is.na(sel))) {
-      stop(paste("psiScalePrior does not mention some factors:", names(path)[is.na(sel)]))
-    }
-    psp <- psiScalePrior[sel,sel]
-    data$NPSI <- data$NFACTORS * (data$NFACTORS - 1) / 2;
-    data$psiScalePrior <- as.array(psp[lower.tri(psp)])
-  }
   data$NPATHS <- sum(itemsPerFactor)
   data$nameInfo[['factor']] <- names(path)
+  data <- setFactorScalePrior(data)
   data
 }
 

@@ -16,8 +16,6 @@ data {
   real propShape;
   int<lower=1> NFACTORS;
   real factorScalePrior[NFACTORS];
-  int<lower=1> NPSI;  // = NFACTORS * (NFACTORS-1) / 2;
-  real psiScalePrior[NPSI];
   int<lower=1> NPATHS;
   int factorItemPath[2,NPATHS];  // 1 is factor index, 2 is item index
   // response data
@@ -58,7 +56,7 @@ transformed data {
 parameters {
   real<lower=0> alpha[NITEMS];
   vector<lower=0,upper=1>[totalThresholds] rawThreshold;
-  corr_matrix[NFACTORS] Psi;
+  cholesky_factor_corr[NFACTORS] CholPsi;
   matrix[NPA,NFACTORS] rawFactor;      // do not interpret, see factor
   vector<lower=0,upper=1>[NPATHS] rawLoadings; // do not interpret, see factorLoadings
   matrix[NPA,NITEMS] rawUniqueTheta; // do not interpret, see uniqueTheta
@@ -67,7 +65,7 @@ parameters {
 transformed parameters {
   vector[totalThresholds] threshold;
   vector[totalThresholds] rawCumTh;
-  cholesky_factor_corr[NFACTORS] CholPsi = cholesky_decompose(Psi);
+  matrix[NPA,NFACTORS] rawFactorPsi;
   matrix[NPA,NITEMS] theta;
   vector[NPATHS] rawPathProp;  // always positive
   real rawPerComponentVar[NITEMS,1+NFACTORS];
@@ -78,10 +76,11 @@ transformed parameters {
   for (fx in 1:NFACTORS) {
     for (ix in 1:NITEMS) rawPerComponentVar[ix,1+fx] = 0;
   }
+  rawFactorPsi = rawFactor * CholPsi';
   for (px in 1:NPATHS) {
     int fx = factorItemPath[1,px];
     int ix = factorItemPath[2,px];
-    vector[NPA] theta1 = (2*rawLoadings[px]-1) * rawFactor[,fx];
+    vector[NPA] theta1 = (2*rawLoadings[px]-1) * rawFactorPsi[,fx];
     rawPerComponentVar[ix,1+fx] = variance(theta1);
     theta[,ix] += theta1;
   }
@@ -110,17 +109,9 @@ transformed parameters {
 model {
   for (ix in 1:NITEMS) alpha[ix] ~ normal(1.749, alphaScalePrior) T[0,];
   rawThreshold ~ beta(1.1, 2);
-  {
-    int px=1;
-    for (cx in 1:(NFACTORS-1)) {
-      for (rx in (cx+1):NFACTORS) {
-        target += normal_lpdf(logit(0.5 + Psi[rx,cx]/2.0) | 0, psiScalePrior[px]);
-        px += 1;
-      }
-    }
-  }
+  CholPsi ~ lkj_corr_cholesky(2.5);
   for (xx in 1:NPA) {
-    rawFactor[xx,] ~ multi_normal_cholesky_lpdf(rep_vector(0, NFACTORS), CholPsi);
+    rawFactor[xx,] ~ std_normal();
   }
   rawLoadings ~ beta(propShape, propShape);
   rawUnique ~ beta(propShape, propShape);
@@ -144,8 +135,9 @@ model {
 }
 generated quantities {
   vector[NPATHS] pathProp = rawPathProp;
-  matrix[NPA,NFACTORS] factor = rawFactor;
+  matrix[NPA,NFACTORS] factor = rawFactorPsi;
   matrix[NITEMS,NITEMS] residualItemCor;
+  matrix[NFACTORS,NFACTORS] Psi = CholPsi * CholPsi';
 
   {
     matrix[NPA,NITEMS] residual;
@@ -177,6 +169,9 @@ generated quantities {
     for (fx in 1:NFACTORS) {
       if (!rawNegateFactor[fx]) continue;
       factor[,fx] = -factor[,fx];
+      Psi[,fx] = -Psi[,fx];
+      Psi[fx,] = -Psi[fx,];
+      Psi[fx,fx] = -Psi[fx,fx];
     }
     for (fx in 1:NPATHS) {
       if (pathLoadings[fx] < 0) pathProp[fx] = -pathProp[fx];
