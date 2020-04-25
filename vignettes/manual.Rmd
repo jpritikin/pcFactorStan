@@ -590,10 +590,10 @@ The idea of putting a prior on `pathProp` was inspired by Gelman (2019, Aug 23).
 
 Gelman, A. (2019, Aug 23). Yes, you can include prior information on quantities of interest, not just on parameters in your model [Blog post]. Retrieved from [https://statmodeling.stat.columbia.edu/2019/08/23/yes-you-can-include-prior-information-on-quantities-of-interest-not-just-on-parameters-in-your-model/](https://statmodeling.stat.columbia.edu/2019/08/23/yes-you-can-include-prior-information-on-quantities-of-interest-not-just-on-parameters-in-your-model/).
 
-Gelman, A., Goodrich, B., Gabry, J., & Vehtari, A. (in press). R-squared for Bayesian regression models. _The American Statistician._ DOI: 10.1080/00031305.2018.1549100
+Gelman, A., Goodrich, B., Gabry, J., & Vehtari, A. (in press). R-squared for Bayesian regression models. _The American Statistician._ \doi{10.1080/00031305.2018.1549100}
 
 Savalei, V. (2006). Logistic approximation to the normal: The KL rationale.
-_Psychometrika, 71_(4), 763–767. doi:10.1007/s11336-004-1237-y
+_Psychometrika, 71_(4), 763–767. \doi{10.1007/s11336-004-1237-y}
 
 Silver, D., Hubert, T., Schrittwieser, J., Antonoglou, I., Lai, M.,
 Guez, A., ... & Lillicrap, T. (2018). A general reinforcement
