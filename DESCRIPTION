@@ -1,6 +1,6 @@
 Package: pcFactorStan
 Title: Stan Models for the Paired Comparison Factor Model
-Version: 1.5.1
+Version: 1.5.2
 Authors@R:
     c(person(given = c("Joshua", "N."),
              family = "Pritikin",
@@ -15,7 +15,8 @@ Authors@R:
              role = "cph"))
 Description: Provides convenience functions and pre-programmed
     Stan models related to the paired comparison factor model. Its purpose
-    is to make fitting paired comparison data using Stan easy.
+    is to make fitting paired comparison data using Stan easy. This
+    package is described in Pritikin (2020) <doi:10.1016/j.heliyon.2020.e04821>.
 License: GPL (>= 3)
 URL: https://github.com/jpritikin/pcFactorStan
 BugReports: https://github.com/jpritikin/pcFactorStan/issues
