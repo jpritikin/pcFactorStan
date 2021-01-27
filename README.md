@@ -13,3 +13,7 @@ Title:       pcFactorStan
 <!-- badges: end -->
 
 pcFactorStan makes it easy to fit the paired comparison factor model using rstan.
+
+## Examples
+
+[Bayesian analysis of comparative judgement data](https://svendemaeyer.netlify.app/posts/2021-01-18-bayesian-analysis-of-comparative-judgement-data/)
