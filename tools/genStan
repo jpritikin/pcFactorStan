@@ -406,7 +406,7 @@ generated quantities {$llDecl
 
 sub openAndPreamble {
     my ($f) = @_;
-    open my $fh, ">src/stan_files/$f.stan.new";
+    open my $fh, ">inst/stan/$f.stan.new";
     print $fh '#include /pre/license.stan
 functions {
 #include /functions/pairwise.stan
