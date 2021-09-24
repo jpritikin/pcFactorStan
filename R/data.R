@@ -19,7 +19,7 @@
 #' that both activities were judged equal on the trait.
 #' @source
 #' A manuscript fully describing the study is in preparation.
-#' Data are made available under the \href{https://cdla.io/sharing-1-0/}{Community Data License Agreement - Sharing - Version 1.0}
+#' Data are made available under the \href{https://cdla.dev/sharing-1-0/}{Community Data License Agreement - Sharing - Version 1.0}
 #' @references
 #' Jackson, S. A., & Eklund, R. C. (2002). Assessing flow in physical activity: The flow state
 #' scale-2 and dispositional flow scale-2. \emph{Journal of Sport and Exercise Psychology, 24}(2),
