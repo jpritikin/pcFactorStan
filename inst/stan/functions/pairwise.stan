@@ -1,7 +1,7 @@
-vector cmp_probs(real scale, real alpha, real pa1, real pa2, vector thr, int[] want) {
+vector cmp_probs(real scale, real alpha, real pa1, real pa2, vector thr, array[] int want) {
   int nth = num_elements(thr);
   int nth2 = nth*2;
-  real pr[1+nth2];
+  array[1+nth2] real pr;
   vector[1 + nth2] out;
   real paDiff = alpha * scale * (pa1 - pa2);
   vector[nth] thrAlpha = thr * alpha;
@@ -32,13 +32,13 @@ vector cmp_probs(real scale, real alpha, real pa1, real pa2, vector thr, int[] w
   return out;
 }
 
-real pairwise_logprob(int[] rcat, int[] weight, int cmpStart, int len,
+real pairwise_logprob(array[] int rcat, array[] int weight, int cmpStart, int len,
                       real scale, real alpha, real pa1, real pa2, vector cumTh)
 {
   real lp = 0;
   int nth = num_elements(cumTh);
   vector[1+nth*2] prob;
-  int want[1+nth*2];
+  array[1+nth*2] int want;
   for (ox in 1:num_elements(want)) want[ox] = 0;
   for (ox in cmpStart:(cmpStart + len - 1)) {
     want[ rcat[ox] ] = 1;
@@ -55,14 +55,14 @@ real pairwise_logprob(int[] rcat, int[] weight, int cmpStart, int len,
   return lp;
 }
 
-real[] pairwise_loo(int[] rcat, int[] weight, int numOutcome, int cmpStart, int len,
+array[] real pairwise_loo(array[] int rcat, array[] int weight, int numOutcome, int cmpStart, int len,
                   real scale, real alpha, real pa1, real pa2, vector cumTh)
 {
-  real lp[numOutcome];
+  array[numOutcome] real lp;
   int cur = 1;
   int nth = num_elements(cumTh);
   vector[1+nth*2] prob;
-  int want[1+nth*2];
+  array[1+nth*2] int want;
   for (ox in 1:num_elements(want)) want[ox] = 0;
   for (ox in cmpStart:(cmpStart + len - 1)) {
     want[ rcat[ox] ] = 1;

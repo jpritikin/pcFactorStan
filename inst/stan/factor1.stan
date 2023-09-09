@@ -10,26 +10,26 @@ data {
   int<lower=1> N;               // observations
   int<lower=1> numRefresh;      // when change in item/pa1/pa2
   int<lower=1> NITEMS;
-  int<lower=1> NTHRESH[NITEMS];         // number of thresholds
-  int<lower=1> TOFFSET[NITEMS];
+  array[NITEMS] int<lower=1> NTHRESH;         // number of thresholds
+  array[NITEMS] int<lower=1> TOFFSET;
   vector[NITEMS] scale;
   real propShape;
   int<lower=1> NFACTORS;
-  real factorScalePrior[NFACTORS];
+  array[NFACTORS] real factorScalePrior;
   int<lower=1> NPATHS;
-  int factorItemPath[2,NPATHS];  // 1 is factor index, 2 is item index
+  array[2,NPATHS] int factorItemPath;  // 1 is factor index, 2 is item index
   // response data
-  int<lower=1, upper=NPA> pa1[numRefresh];
-  int<lower=1, upper=NPA> pa2[numRefresh];
-  int weight[NCMP];
-  int pick[NCMP];
-  int refresh[numRefresh];
-  int numOutcome[numRefresh];
-  int item[numRefresh];
+  array[numRefresh] int<lower=1, upper=NPA> pa1;
+  array[numRefresh] int<lower=1, upper=NPA> pa2;
+  array[NCMP] int weight;
+  array[NCMP] int pick;
+  array[numRefresh] int refresh;
+  array[numRefresh] int numOutcome;
+  array[numRefresh] int item;
 }
 transformed data {
   int totalThresholds = sum(NTHRESH);
-  int rcat[NCMP];
+  array[NCMP] int rcat;
   vector[NPATHS] pathScalePrior;
   {
     int cmpStart = 0;
@@ -54,7 +54,7 @@ transformed data {
   }
 }
 parameters {
-  real<lower=0> alpha[NITEMS];
+  array[NITEMS] real<lower=0> alpha;
   vector<lower=0,upper=1>[totalThresholds] rawThreshold;
   matrix[NPA,NFACTORS] rawFactor;      // do not interpret, see factor
   vector<lower=0,upper=1>[NPATHS] rawLoadings; // do not interpret, see factorLoadings
@@ -66,7 +66,7 @@ transformed parameters {
   vector[totalThresholds] rawCumTh;
   matrix[NPA,NITEMS] theta;
   vector[NPATHS] rawPathProp;  // always positive
-  real rawPerComponentVar[NITEMS,1+NFACTORS];
+  array[NITEMS,1+NFACTORS] real rawPerComponentVar;
   for (ix in 1:NITEMS) {
     theta[,ix] = rawUniqueTheta[,ix] * (2*rawUnique[ix]-1);
     rawPerComponentVar[ix, 1] = variance(theta[,ix]);
@@ -145,8 +145,8 @@ generated quantities {
 
   {
     vector[NPATHS] pathLoadings = (2*rawLoadings-1);
-    int rawSeenFactor[NFACTORS];
-    int rawNegateFactor[NFACTORS];
+    array[NFACTORS] int rawSeenFactor;
+    array[NFACTORS] int rawNegateFactor;
     for (fx in 1:NFACTORS) rawSeenFactor[fx] = 0;
     for (px in 1:NPATHS) {
       int fx = factorItemPath[1,px];
