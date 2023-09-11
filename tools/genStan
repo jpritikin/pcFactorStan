@@ -29,16 +29,16 @@ my $commonData =
 
 my $responseData =
 '  // response data
-  int<lower=1, upper=NPA> pa1[numRefresh];
-  int<lower=1, upper=NPA> pa2[numRefresh];
-  int weight[NCMP];
-  int pick[NCMP];
-  int refresh[numRefresh];
-  int numOutcome[numRefresh];';
+  array[numRefresh] int<lower=1, upper=NPA> pa1;
+  array[numRefresh] int<lower=1, upper=NPA> pa2;
+  array[NCMP] int weight;
+  array[NCMP] int pick;
+  array[numRefresh] int refresh;
+  array[numRefresh] int numOutcome;';
 
 my $looDecl =
   '
-  real log_lik[N];
+  array[N] real log_lik;
 ';
 
 my $unidim_ll =
@@ -88,7 +88,7 @@ $commonData
 $responseData
 }
 transformed data {
-  int rcat[NCMP];$xdata
+  array[NCMP] int rcat;$xdata
 
   for (cmp in 1:NCMP) {
     rcat[cmp] = pick[cmp] + NTHRESH + 1;
@@ -135,15 +135,15 @@ sub mvtDataCommon {
 qq[data {
 $commonData
   int<lower=1> NITEMS;
-  int<lower=1> NTHRESH[NITEMS];         // number of thresholds
-  int<lower=1> TOFFSET[NITEMS];
+  array[NITEMS] int<lower=1> NTHRESH;         // number of thresholds
+  array[NITEMS] int<lower=1> TOFFSET;
   vector[NITEMS] scale;$data
 $responseData
-  int item[numRefresh];
+  array[numRefresh] int item;
 }
 transformed data {
   int totalThresholds = sum(NTHRESH);
-  int rcat[NCMP];$tdataDecl
+  array[NCMP] int rcat;$tdataDecl
   {
     int cmpStart = 0;
     for (rx in 1:numRefresh) {
@@ -283,9 +283,9 @@ sub mkFactorModel {
     mvtDataCommon("
   real propShape;
   int<lower=1> NFACTORS;
-  real factorScalePrior[NFACTORS];
+  array[NFACTORS] real factorScalePrior;
   int<lower=1> NPATHS;
-  int factorItemPath[2,NPATHS];  // 1 is factor index, 2 is item index",
+  array[2,NPATHS] int factorItemPath;  // 1 is factor index, 2 is item index",
 		 '
   vector[NPATHS] pathScalePrior;',
 		 '
@@ -302,7 +302,7 @@ sub mkFactorModel {
   }').
     qq[
 parameters {
-  real<lower=0> alpha[NITEMS];
+  array[NITEMS] real<lower=0> alpha;
   $multivariateThresholdParam$psiParam
   matrix[NPA,NFACTORS] rawFactor;      // do not interpret, see factor
   vector<lower=0,upper=1>[NPATHS] rawLoadings; // do not interpret, see factorLoadings
@@ -313,7 +313,7 @@ transformed parameters {
   $multivariateThresholdTParamDecl$psiTparamDecl
   matrix[NPA,NITEMS] theta;
   vector[NPATHS] rawPathProp;  // always positive
-  real rawPerComponentVar[NITEMS,1+NFACTORS];
+  array[NITEMS,1+NFACTORS] real rawPerComponentVar;
   for (ix in 1:NITEMS) {
     theta[,ix] = rawUniqueTheta[,ix] * (2*rawUnique[ix]-1);
     rawPerComponentVar[ix, 1] = variance(theta[,ix]);
@@ -374,8 +374,8 @@ generated quantities {$llDecl
 
   {
     vector[NPATHS] pathLoadings = (2*rawLoadings-1);
-    int rawSeenFactor[NFACTORS];
-    int rawNegateFactor[NFACTORS];
+    array[NFACTORS] int rawSeenFactor;
+    array[NFACTORS] int rawNegateFactor;
     for (fx in 1:NFACTORS) rawSeenFactor[fx] = 0;
     for (px in 1:NPATHS) {
       int fx = factorItemPath[1,px];
@@ -455,7 +455,7 @@ functions {
 for my $f (qw(unidim unidim_adapt unidim_ll
  correlation correlation_ll factor1 factor1_ll
  factor factor_ll)) {
-    my $old = "src/stan_files/$f.stan";
+    my $old = "inst/stan/$f.stan";
     my $new = "$old.new";
     if (-e $old && compare($old, $new) == 0) {
 	unlink($new)
