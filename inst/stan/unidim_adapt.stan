@@ -12,15 +12,15 @@ data {
   int<lower=1> NTHRESH;         // number of thresholds
   real varCorrection;
   // response data
-  int<lower=1, upper=NPA> pa1[numRefresh];
-  int<lower=1, upper=NPA> pa2[numRefresh];
-  int weight[NCMP];
-  int pick[NCMP];
-  int refresh[numRefresh];
-  int numOutcome[numRefresh];
+  array[numRefresh] int<lower=1, upper=NPA> pa1;
+  array[numRefresh] int<lower=1, upper=NPA> pa2;
+  array[NCMP] int weight;
+  array[NCMP] int pick;
+  array[numRefresh] int refresh;
+  array[numRefresh] int numOutcome;
 }
 transformed data {
-  int rcat[NCMP];
+  array[NCMP] int rcat;
   real alpha = 1.749;
 
   for (cmp in 1:NCMP) {

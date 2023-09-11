@@ -10,22 +10,22 @@ data {
   int<lower=1> N;               // observations
   int<lower=1> numRefresh;      // when change in item/pa1/pa2
   int<lower=1> NITEMS;
-  int<lower=1> NTHRESH[NITEMS];         // number of thresholds
-  int<lower=1> TOFFSET[NITEMS];
+  array[NITEMS] int<lower=1> NTHRESH;         // number of thresholds
+  array[NITEMS] int<lower=1> TOFFSET;
   vector[NITEMS] scale;
   real corLKJPrior;
   // response data
-  int<lower=1, upper=NPA> pa1[numRefresh];
-  int<lower=1, upper=NPA> pa2[numRefresh];
-  int weight[NCMP];
-  int pick[NCMP];
-  int refresh[numRefresh];
-  int numOutcome[numRefresh];
-  int item[numRefresh];
+  array[numRefresh] int<lower=1, upper=NPA> pa1;
+  array[numRefresh] int<lower=1, upper=NPA> pa2;
+  array[NCMP] int weight;
+  array[NCMP] int pick;
+  array[numRefresh] int refresh;
+  array[numRefresh] int numOutcome;
+  array[numRefresh] int item;
 }
 transformed data {
   int totalThresholds = sum(NTHRESH);
-  int rcat[NCMP];
+  array[NCMP] int rcat;
   {
     int cmpStart = 0;
     for (rx in 1:numRefresh) {
