@@ -1,4 +1,6 @@
-citEntry(entry="article",
+citation(auto = meta)
+
+bibentry(bibtype="article",
 	title = paste("An exploratory factor model for ordinal paired comparison indicators"),
   author = c(person(given = c("Joshua", "N."),
              family = "Pritikin",
