@@ -1,6 +1,6 @@
 Package: pcFactorStan
 Title: Stan Models for the Paired Comparison Factor Model
-Version: 1.5.3
+Version: 1.5.4
 Authors@R:
     c(person(given = c("Joshua", "N."),
              family = "Pritikin",
